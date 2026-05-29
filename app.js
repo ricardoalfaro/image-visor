@@ -19,6 +19,7 @@ const activeName = document.querySelector("#activeName");
 const activePosition = document.querySelector("#activePosition");
 const previousButton = document.querySelector("#previousButton");
 const nextButton = document.querySelector("#nextButton");
+const serverButton = document.querySelector("#serverButton");
 const fullscreenButton = document.querySelector("#fullscreenButton");
 const zoomOutButton = document.querySelector("#zoomOutButton");
 const zoomInButton = document.querySelector("#zoomInButton");
@@ -28,8 +29,10 @@ const zoomRange = document.querySelector("#zoomRange");
 let images = [];
 let activeIndex = -1;
 let zoom = 100;
+let sourceLabel = "Carpeta local";
 
 folderInput.addEventListener("change", handleFolderSelection);
+serverButton.addEventListener("click", loadServerImages);
 previousButton.addEventListener("click", showPrevious);
 nextButton.addEventListener("click", showNext);
 fullscreenButton.addEventListener("click", toggleFullscreen);
@@ -43,6 +46,7 @@ document.addEventListener("keydown", handleKeyboard);
 
 function handleFolderSelection(event) {
   releaseImageUrls();
+  sourceLabel = "Carpeta local";
 
   const files = Array.from(event.target.files || []);
   images = files
@@ -53,12 +57,48 @@ function handleFolderSelection(event) {
       name: file.name,
       path: getDisplayPath(file),
       url: URL.createObjectURL(file),
+      isObjectUrl: true,
     }));
 
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
   renderThumbnails();
   renderActiveImage();
+}
+
+async function loadServerImages() {
+  releaseImageUrls();
+  serverButton.disabled = true;
+  folderSummary.textContent = "Cargando imagenes desde el servidor local...";
+
+  try {
+    const response = await fetch("/api/images");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    sourceLabel = payload.root || "Servidor local";
+    images = payload.images.map((image) => ({
+      name: image.name,
+      path: image.path,
+      url: image.url,
+      isObjectUrl: false,
+    }));
+
+    activeIndex = images.length > 0 ? 0 : -1;
+    setZoom(100);
+    renderThumbnails();
+    renderActiveImage();
+  } catch (error) {
+    images = [];
+    activeIndex = -1;
+    renderThumbnails();
+    renderActiveImage();
+    folderSummary.textContent = "No se pudo cargar /api/images. Inicia el servidor local con node server.js.";
+  } finally {
+    serverButton.disabled = false;
+  }
 }
 
 function isSupportedImage(file) {
@@ -77,9 +117,8 @@ function renderThumbnails() {
   thumbnailList.replaceChildren();
   imageCount.textContent = String(images.length);
 
-  const folderName = images[0]?.path.split("/")[0];
   folderSummary.textContent = images.length
-    ? `${folderName || "Carpeta local"} · ${images.length} imagenes`
+    ? `${sourceLabel} · ${images.length} imagenes`
     : "No se encontraron imagenes en la carpeta seleccionada.";
 
   images.forEach((image, index) => {
@@ -210,6 +249,9 @@ function handleKeyboard(event) {
 }
 
 function releaseImageUrls() {
-  images.forEach((image) => URL.revokeObjectURL(image.url));
+  images.forEach((image) => {
+    if (image.isObjectUrl) {
+      URL.revokeObjectURL(image.url);
+    }
+  });
 }
-

@@ -18,6 +18,7 @@
             Abrir carpeta
             <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple>
           </label>
+          <button id="serverButton" class="button" type="button">Cargar servidor</button>
           <button id="fullscreenButton" class="button" type="button" disabled>Pantalla completa</button>
         </div>
       </header>
@@ -34,7 +35,7 @@
         <section class="stage-panel">
           <div id="emptyState" class="empty-state">
             <h2>Elige una carpeta</h2>
-            <p>El visor leera solo los archivos de imagen y los mostrara aqui.</p>
+            <p>El visor leera imagenes desde una carpeta local o desde el servidor local.</p>
           </div>
 
           <div id="stage" class="stage is-hidden">
@@ -62,4 +63,3 @@
     <script src="app.js"></script>
   </body>
 </html>
-
