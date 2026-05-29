@@ -256,6 +256,8 @@ input[type="range"] {
 }
 
 :fullscreen .topbar,
+:fullscreen .nav-button,
+:fullscreen .image-frame figcaption,
 :fullscreen .controls {
   display: none;
 }
@@ -266,11 +268,15 @@ input[type="range"] {
 }
 
 :fullscreen .stage {
-  padding: 24px 76px;
+  padding: 0;
+  overflow: hidden;
 }
 
 :fullscreen .image-frame img {
-  max-height: calc(100vh - 72px);
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {
