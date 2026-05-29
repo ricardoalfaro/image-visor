@@ -16,6 +16,14 @@ node server.js /ruta/a/tu/carpeta/de/imagenes
 
 Luego abre `http://127.0.0.1:5173` y usa `Cargar servidor`.
 
+El endpoint `/api/images` pagina la lista en bloques de hasta 100 imagenes:
+
+```text
+/api/images?offset=0&limit=100
+```
+
+El servidor mantiene un manifiesto liviano con rutas y sirve cada imagen desde disco cuando el navegador la pide.
+
 Atajos:
 
 - `ArrowLeft` y `ArrowRight`: imagen anterior o siguiente

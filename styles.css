@@ -126,76 +126,8 @@ input[type="file"] {
 
 .viewer-layout {
   display: grid;
-  grid-template-columns: minmax(180px, 260px) 1fr;
+  grid-template-columns: 1fr;
   min-height: 0;
-}
-
-.sidebar {
-  min-height: 0;
-  border-right: 1px solid var(--line);
-  background: #14171a;
-  display: grid;
-  grid-template-rows: auto 1fr;
-}
-
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
-}
-
-.thumbnail-list {
-  min-height: 0;
-  overflow: auto;
-  padding: 10px;
-}
-
-.thumbnail {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 54px 1fr;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text);
-  padding: 7px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.thumbnail + .thumbnail {
-  margin-top: 6px;
-}
-
-.thumbnail:hover,
-.thumbnail.is-active {
-  background: var(--panel);
-  border-color: var(--line);
-}
-
-.thumbnail.is-active {
-  border-color: var(--accent);
-}
-
-.thumbnail img {
-  width: 54px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 6px;
-  background: #090a0b;
-}
-
-.thumbnail span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
 }
 
 .stage-panel {
@@ -324,7 +256,6 @@ input[type="range"] {
 }
 
 :fullscreen .topbar,
-:fullscreen .sidebar,
 :fullscreen .controls {
   display: none;
 }
@@ -359,30 +290,6 @@ input[type="range"] {
 
   .viewer-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    max-height: 156px;
-  }
-
-  .thumbnail-list {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 140px;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .thumbnail {
-    grid-template-columns: 1fr;
-  }
-
-  .thumbnail img {
-    width: 100%;
-    height: 72px;
   }
 
   .stage {
@@ -407,4 +314,3 @@ input[type="range"] {
     max-width: 70vw;
   }
 }
-

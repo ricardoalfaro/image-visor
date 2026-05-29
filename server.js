@@ -26,13 +26,14 @@ const appRoot = __dirname;
 const imageRoot = path.resolve(process.argv[2] || process.cwd());
 const port = Number(process.env.PORT || 5173);
 const host = process.env.HOST || "127.0.0.1";
+let imageManifestPromise;
 
 const server = http.createServer(async (request, response) => {
   try {
     const requestUrl = new URL(request.url, `http://${request.headers.host}`);
 
     if (requestUrl.pathname === "/api/images") {
-      await sendImageManifest(response);
+      await sendImageManifest(response, requestUrl);
       return;
     }
 
@@ -57,13 +58,30 @@ server.listen(port, host, () => {
   console.log(`Serving images from: ${imageRoot}`);
 });
 
-async function sendImageManifest(response) {
-  const images = await findImages(imageRoot);
+async function sendImageManifest(response, requestUrl) {
+  const offset = Math.max(0, Number(requestUrl.searchParams.get("offset") || 0));
+  const requestedLimit = Math.max(1, Number(requestUrl.searchParams.get("limit") || 100));
+  const limit = Math.min(100, requestedLimit);
+  const images = await getImageManifest();
+  const page = images.slice(offset, offset + limit);
+
   sendJson(response, 200, {
     root: path.basename(imageRoot) || imageRoot,
-    count: images.length,
-    images,
+    total: images.length,
+    offset,
+    limit,
+    count: page.length,
+    hasMore: offset + page.length < images.length,
+    images: page,
   });
+}
+
+function getImageManifest() {
+  if (!imageManifestPromise) {
+    imageManifestPromise = findImages(imageRoot);
+  }
+
+  return imageManifestPromise;
 }
 
 async function findImages(directory, baseDirectory = directory) {

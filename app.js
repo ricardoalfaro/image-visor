@@ -8,10 +8,11 @@ const IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 
+const SERVER_PAGE_SIZE = 100;
+const PREFETCH_REMAINING = 12;
+
 const folderInput = document.querySelector("#folderInput");
 const folderSummary = document.querySelector("#folderSummary");
-const imageCount = document.querySelector("#imageCount");
-const thumbnailList = document.querySelector("#thumbnailList");
 const emptyState = document.querySelector("#emptyState");
 const stage = document.querySelector("#stage");
 const activeImage = document.querySelector("#activeImage");
@@ -30,6 +31,11 @@ let images = [];
 let activeIndex = -1;
 let zoom = 100;
 let sourceLabel = "Carpeta local";
+let sourceMode = "local";
+let currentObjectUrl = "";
+let serverTotal = 0;
+let serverHasMore = false;
+let serverLoading = false;
 
 folderInput.addEventListener("change", handleFolderSelection);
 serverButton.addEventListener("click", loadServerImages);
@@ -45,8 +51,11 @@ document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("keydown", handleKeyboard);
 
 function handleFolderSelection(event) {
-  releaseImageUrls();
+  clearActiveObjectUrl();
+  sourceMode = "local";
   sourceLabel = "Carpeta local";
+  serverTotal = 0;
+  serverHasMore = false;
 
   const files = Array.from(event.target.files || []);
   images = files
@@ -56,48 +65,66 @@ function handleFolderSelection(event) {
       file,
       name: file.name,
       path: getDisplayPath(file),
-      url: URL.createObjectURL(file),
-      isObjectUrl: true,
     }));
 
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
-  renderThumbnails();
   renderActiveImage();
 }
 
 async function loadServerImages() {
-  releaseImageUrls();
+  clearActiveObjectUrl();
+  sourceMode = "server";
+  sourceLabel = "Servidor local";
+  images = [];
+  activeIndex = -1;
+  serverTotal = 0;
+  serverHasMore = false;
   serverButton.disabled = true;
-  folderSummary.textContent = "Cargando imagenes desde el servidor local...";
+  folderSummary.textContent = "Cargando primeras imagenes desde el servidor local...";
 
   try {
-    const response = await fetch("/api/images");
+    await loadServerPage(0);
+    activeIndex = images.length > 0 ? 0 : -1;
+    setZoom(100);
+    renderActiveImage();
+  } catch (error) {
+    images = [];
+    activeIndex = -1;
+    renderActiveImage();
+    folderSummary.textContent = "No se pudo cargar /api/images. Inicia el servidor local con node server.js.";
+  } finally {
+    serverButton.disabled = false;
+  }
+}
+
+async function loadServerPage(offset) {
+  if (serverLoading) {
+    return;
+  }
+
+  serverLoading = true;
+
+  try {
+    const response = await fetch(`/api/images?offset=${offset}&limit=${SERVER_PAGE_SIZE}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     const payload = await response.json();
     sourceLabel = payload.root || "Servidor local";
-    images = payload.images.map((image) => ({
+    serverTotal = payload.total || payload.count || 0;
+    serverHasMore = Boolean(payload.hasMore);
+
+    const incoming = payload.images.map((image) => ({
       name: image.name,
       path: image.path,
       url: image.url,
-      isObjectUrl: false,
     }));
 
-    activeIndex = images.length > 0 ? 0 : -1;
-    setZoom(100);
-    renderThumbnails();
-    renderActiveImage();
-  } catch (error) {
-    images = [];
-    activeIndex = -1;
-    renderThumbnails();
-    renderActiveImage();
-    folderSummary.textContent = "No se pudo cargar /api/images. Inicia el servidor local con node server.js.";
+    images.push(...incoming);
   } finally {
-    serverButton.disabled = false;
+    serverLoading = false;
   }
 }
 
@@ -113,37 +140,7 @@ function getDisplayPath(file) {
   return file.webkitRelativePath || file.name;
 }
 
-function renderThumbnails() {
-  thumbnailList.replaceChildren();
-  imageCount.textContent = String(images.length);
-
-  folderSummary.textContent = images.length
-    ? `${sourceLabel} · ${images.length} imagenes`
-    : "No se encontraron imagenes en la carpeta seleccionada.";
-
-  images.forEach((image, index) => {
-    const button = document.createElement("button");
-    button.className = "thumbnail";
-    button.type = "button";
-    button.dataset.index = String(index);
-    button.setAttribute("aria-label", `Abrir ${image.name}`);
-    button.addEventListener("click", () => selectImage(index));
-
-    const thumbnail = document.createElement("img");
-    thumbnail.src = image.url;
-    thumbnail.alt = "";
-    thumbnail.loading = "lazy";
-
-    const label = document.createElement("span");
-    label.textContent = image.name;
-    label.title = image.path;
-
-    button.append(thumbnail, label);
-    thumbnailList.append(button);
-  });
-}
-
-function renderActiveImage() {
+async function renderActiveImage() {
   const hasImages = images.length > 0;
   emptyState.classList.toggle("is-hidden", hasImages);
   stage.classList.toggle("is-hidden", !hasImages);
@@ -154,43 +151,78 @@ function renderActiveImage() {
   resetZoomButton.disabled = !hasImages;
   zoomRange.disabled = !hasImages;
   previousButton.disabled = activeIndex <= 0;
-  nextButton.disabled = activeIndex >= images.length - 1;
+  nextButton.disabled = !canMoveNext();
 
   if (!hasImages) {
+    clearActiveObjectUrl();
     activeImage.removeAttribute("src");
     activeImage.alt = "";
     activeName.textContent = "";
     activePosition.textContent = "";
+    updateSummary();
     return;
   }
 
   const image = images[activeIndex];
-  activeImage.src = image.url;
+  activeImage.src = getImageUrl(image);
   activeImage.alt = image.name;
   activeName.textContent = image.name;
   activeName.title = image.path;
-  activePosition.textContent = `${activeIndex + 1} / ${images.length}`;
+  activePosition.textContent = getPositionText();
+  updateSummary();
 
-  document.querySelectorAll(".thumbnail").forEach((thumbnail) => {
-    const isActive = Number(thumbnail.dataset.index) === activeIndex;
-    thumbnail.classList.toggle("is-active", isActive);
-    thumbnail.setAttribute("aria-current", isActive ? "true" : "false");
-  });
-
-  document.querySelector(".thumbnail.is-active")?.scrollIntoView({
-    block: "nearest",
-    inline: "nearest",
-  });
+  if (sourceMode === "server") {
+    await maybePrefetchServerPage();
+    nextButton.disabled = !canMoveNext();
+  }
 }
 
-function selectImage(index) {
-  if (index < 0 || index >= images.length) {
+function getImageUrl(image) {
+  if (sourceMode === "server") {
+    clearActiveObjectUrl();
+    return image.url;
+  }
+
+  clearActiveObjectUrl();
+  currentObjectUrl = URL.createObjectURL(image.file);
+  return currentObjectUrl;
+}
+
+function getPositionText() {
+  const total = sourceMode === "server" && serverTotal ? serverTotal : images.length;
+  return `${activeIndex + 1} / ${total}`;
+}
+
+function updateSummary() {
+  if (!images.length) {
+    folderSummary.textContent = "No se encontraron imagenes en la carpeta seleccionada.";
+    return;
+  }
+
+  if (sourceMode === "server" && serverTotal) {
+    folderSummary.textContent = `${sourceLabel} · ${activeIndex + 1} de ${serverTotal} · ${images.length} cargadas`;
+    return;
+  }
+
+  folderSummary.textContent = `${sourceLabel} · ${activeIndex + 1} de ${images.length}`;
+}
+
+async function selectImage(index) {
+  if (index < 0) {
+    return;
+  }
+
+  if (sourceMode === "server" && index >= images.length && serverHasMore) {
+    await loadServerPage(images.length);
+  }
+
+  if (index >= images.length) {
     return;
   }
 
   activeIndex = index;
   setZoom(100);
-  renderActiveImage();
+  await renderActiveImage();
 }
 
 function showPrevious() {
@@ -199,6 +231,22 @@ function showPrevious() {
 
 function showNext() {
   selectImage(activeIndex + 1);
+}
+
+function canMoveNext() {
+  return activeIndex < images.length - 1 || (sourceMode === "server" && serverHasMore);
+}
+
+async function maybePrefetchServerPage() {
+  if (sourceMode !== "server" || !serverHasMore || serverLoading) {
+    return;
+  }
+
+  const remainingLoaded = images.length - activeIndex - 1;
+  if (remainingLoaded <= PREFETCH_REMAINING) {
+    await loadServerPage(images.length);
+    updateSummary();
+  }
 }
 
 async function toggleFullscreen() {
@@ -248,10 +296,9 @@ function handleKeyboard(event) {
   }
 }
 
-function releaseImageUrls() {
-  images.forEach((image) => {
-    if (image.isObjectUrl) {
-      URL.revokeObjectURL(image.url);
-    }
-  });
+function clearActiveObjectUrl() {
+  if (currentObjectUrl) {
+    URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = "";
+  }
 }
