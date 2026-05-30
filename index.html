@@ -1,55 +1,83 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="auto">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Image Visor</title>
+    <title>Visualizador de imágenes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
-        <div>
-          <h1>Image Visor</h1>
-          <p id="folderSummary">Selecciona una carpeta local para empezar.</p>
-        </div>
-        <div class="actions">
-          <label class="button primary">
-            Abrir carpeta
-            <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple>
-          </label>
-          <button id="serverButton" class="button" type="button">Cargar servidor</button>
-          <button id="fullscreenButton" class="button" type="button" disabled>Pantalla completa</button>
-        </div>
+      <header class="theme-bar" aria-label="Preferencia de apariencia">
+        <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático">
+          <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
+        </button>
       </header>
 
-      <section class="viewer-layout" aria-label="Visor de imagenes">
-        <section class="stage-panel">
-          <div id="emptyState" class="empty-state">
-            <h2>Elige una carpeta</h2>
-            <p>El visor cargara una imagen a la vez desde una carpeta local o desde el servidor local.</p>
-          </div>
+      <section class="viewer-layout" aria-label="Visualizador de imágenes">
+        <div class="welcome-copy">
+          <h1>Visualizador de<br>imágenes</h1>
+        </div>
 
-          <div id="stage" class="stage is-hidden">
-            <button id="previousButton" class="nav-button previous" type="button" aria-label="Imagen anterior">‹</button>
-            <figure class="image-frame">
+        <section id="stage" class="stage is-hidden">
+          <button id="previousButton" class="nav-button previous" type="button" aria-label="Imagen anterior" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+
+          <figure id="photoFrame" class="photo-frame">
+            <img id="placeholderImage" class="placeholder-image" src="assets/placeholder.jpeg" alt="">
+            <div id="imageViewport" class="image-viewport is-hidden">
               <img id="activeImage" alt="">
-              <figcaption>
-                <span id="activeName"></span>
-                <span id="activePosition"></span>
-              </figcaption>
-            </figure>
-            <button id="nextButton" class="nav-button next" type="button" aria-label="Imagen siguiente">›</button>
-          </div>
+              <div class="image-overlay" aria-hidden="true">
+                <span id="activePosition" class="overlay-text overlay-left"></span>
+                <span id="activeName" class="overlay-text overlay-right"></span>
+              </div>
+            </div>
+          </figure>
 
-          <footer class="controls" aria-label="Controles del visor">
-            <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">-</button>
-            <input id="zoomRange" type="range" min="25" max="300" step="5" value="100" disabled aria-label="Zoom">
-            <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">+</button>
-            <button id="resetZoomButton" class="button compact" type="button" disabled>100%</button>
-          </footer>
+          <button id="nextButton" class="nav-button next" type="button" aria-label="Imagen siguiente" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+          </button>
         </section>
       </section>
+
+      <footer class="bottom-bar">
+        <div class="bottom-actions">
+          <button id="serverButton" class="button primary" type="button">Elegir carpeta</button>
+          <label id="browserFolderLink" class="text-link">
+            Abrir sin servidor
+            <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple>
+          </label>
+          <span id="browserFolderWarning" class="inline-warning is-hidden">Evita carpetas demasiado grandes en este modo.</span>
+        </div>
+
+        <div class="controls" aria-label="Controles del visualizador">
+          <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"></path></svg>
+          </button>
+          <button id="stopButton" class="icon-button" type="button" disabled aria-label="Detener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+          </button>
+          <button id="shuffleButton" class="icon-button" type="button" disabled aria-label="Aleatorio" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20l5.5-5.5M15 4l6 6M4 4l16 16M16 21h5v-5"></path></svg>
+          </button>
+          <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M8 11h6M16.5 16.5 21 21"></path></svg>
+          </button>
+          <button id="resetZoomButton" class="button zoom-value" type="button" disabled>100%</button>
+          <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M11 8v6M8 11h6M16.5 16.5 21 21"></path></svg>
+          </button>
+          <button id="fullscreenButton" class="icon-button" type="button" disabled aria-label="Pantalla completa">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M21 8V3h-5M3 16v5h5M16 21h5v-5"></path></svg>
+          </button>
+        </div>
+      </footer>
     </main>
 
     <script src="app.js"></script>

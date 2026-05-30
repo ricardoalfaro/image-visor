@@ -10,11 +10,16 @@ const IMAGE_TYPES = new Set([
 
 const SERVER_PAGE_SIZE = 100;
 const PREFETCH_REMAINING = 12;
+const SLIDESHOW_INTERVAL_MS = 4000;
+const BROWSER_PICKER_WARNING = "Modo sin servidor: evita elegir una carpeta demasiado grande.";
+const THEME_SEQUENCE = ["auto", "light", "dark"];
 
 const folderInput = document.querySelector("#folderInput");
-const folderSummary = document.querySelector("#folderSummary");
-const emptyState = document.querySelector("#emptyState");
+const browserFolderWarning = document.querySelector("#browserFolderWarning");
 const stage = document.querySelector("#stage");
+const photoFrame = document.querySelector("#photoFrame");
+const placeholderImage = document.querySelector("#placeholderImage");
+const imageViewport = document.querySelector("#imageViewport");
 const activeImage = document.querySelector("#activeImage");
 const activeName = document.querySelector("#activeName");
 const activePosition = document.querySelector("#activePosition");
@@ -22,10 +27,13 @@ const previousButton = document.querySelector("#previousButton");
 const nextButton = document.querySelector("#nextButton");
 const serverButton = document.querySelector("#serverButton");
 const fullscreenButton = document.querySelector("#fullscreenButton");
+const playButton = document.querySelector("#playButton");
+const stopButton = document.querySelector("#stopButton");
+const shuffleButton = document.querySelector("#shuffleButton");
 const zoomOutButton = document.querySelector("#zoomOutButton");
 const zoomInButton = document.querySelector("#zoomInButton");
 const resetZoomButton = document.querySelector("#resetZoomButton");
-const zoomRange = document.querySelector("#zoomRange");
+const themeToggleButton = document.querySelector("#themeToggleButton");
 
 let images = [];
 let activeIndex = -1;
@@ -36,26 +44,49 @@ let currentObjectUrl = "";
 let serverTotal = 0;
 let serverHasMore = false;
 let serverLoading = false;
+let isPlaying = false;
+let shuffleEnabled = false;
+let slideshowTimer = 0;
+let panX = 0;
+let panY = 0;
+let dragState = null;
 
+folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
 serverButton.addEventListener("click", loadServerImages);
 previousButton.addEventListener("click", showPrevious);
 nextButton.addEventListener("click", showNext);
 fullscreenButton.addEventListener("click", toggleFullscreen);
+playButton.addEventListener("click", startSlideshow);
+stopButton.addEventListener("click", stopSlideshowAndRender);
+shuffleButton.addEventListener("click", toggleShuffle);
 zoomOutButton.addEventListener("click", () => setZoom(zoom - 10));
 zoomInButton.addEventListener("click", () => setZoom(zoom + 10));
 resetZoomButton.addEventListener("click", () => setZoom(100));
-zoomRange.addEventListener("input", (event) => setZoom(Number(event.target.value)));
+themeToggleButton.addEventListener("click", cycleThemePreference);
+imageViewport.addEventListener("pointerdown", startImageDrag);
+imageViewport.addEventListener("pointermove", dragImage);
+imageViewport.addEventListener("pointerup", endImageDrag);
+imageViewport.addEventListener("pointercancel", endImageDrag);
+imageViewport.addEventListener("lostpointercapture", endImageDrag);
+activeImage.addEventListener("load", updateFrameOrientation);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("keydown", handleKeyboard);
+setThemePreference(localStorage.getItem("imageVisorTheme") || "auto", { persist: false });
 
-function handleFolderSelection(event) {
+async function handleBrowserFolderIntent() {
+  browserFolderWarning.classList.remove("is-hidden");
+  browserFolderWarning.textContent = BROWSER_PICKER_WARNING;
+}
+
+async function handleFolderSelection(event) {
   clearActiveObjectUrl();
   sourceMode = "local";
   sourceLabel = "Carpeta local";
   serverTotal = 0;
   serverHasMore = false;
+  stopSlideshow();
 
   const files = Array.from(event.target.files || []);
   images = files
@@ -69,33 +100,56 @@ function handleFolderSelection(event) {
 
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
-  renderActiveImage();
+  await renderActiveImage();
 }
 
 async function loadServerImages() {
   clearActiveObjectUrl();
+  browserFolderWarning.classList.add("is-hidden");
   sourceMode = "server";
   sourceLabel = "Servidor local";
   images = [];
   activeIndex = -1;
   serverTotal = 0;
   serverHasMore = false;
+  stopSlideshow();
   serverButton.disabled = true;
-  folderSummary.textContent = "Cargando primeras imagenes desde el servidor local...";
 
   try {
+    const folderSelected = await selectServerFolder();
+    if (!folderSelected) {
+      renderActiveImage();
+      return;
+    }
+
     await loadServerPage(0);
     activeIndex = images.length > 0 ? 0 : -1;
     setZoom(100);
-    renderActiveImage();
+    await renderActiveImage();
   } catch (error) {
     images = [];
     activeIndex = -1;
     renderActiveImage();
-    folderSummary.textContent = "No se pudo cargar /api/images. Inicia el servidor local con node server.js.";
+    browserFolderWarning.classList.remove("is-hidden");
+    browserFolderWarning.textContent = "No se pudo elegir o cargar la carpeta desde el servidor local.";
   } finally {
     serverButton.disabled = false;
   }
+}
+
+async function selectServerFolder() {
+  const response = await fetch("/api/select-folder", { method: "POST" });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (payload.cancelled) {
+    return false;
+  }
+
+  sourceLabel = payload.root || "Servidor local";
+  return true;
 }
 
 async function loadServerPage(offset) {
@@ -142,14 +196,28 @@ function getDisplayPath(file) {
 
 async function renderActiveImage() {
   const hasImages = images.length > 0;
-  emptyState.classList.toggle("is-hidden", hasImages);
+  if (!hasImages) {
+    stopSlideshow();
+  }
+
+  placeholderImage.classList.toggle("is-hidden", hasImages);
+  imageViewport.classList.toggle("is-hidden", !hasImages);
   stage.classList.toggle("is-hidden", !hasImages);
+  stage.classList.toggle("has-images", hasImages);
+  photoFrame.classList.toggle("is-portrait", false);
+  photoFrame.classList.toggle("is-landscape", false);
 
   fullscreenButton.disabled = !hasImages;
   zoomOutButton.disabled = !hasImages;
   zoomInButton.disabled = !hasImages;
   resetZoomButton.disabled = !hasImages;
-  zoomRange.disabled = !hasImages;
+  playButton.disabled = !hasImages || isPlaying;
+  stopButton.disabled = !hasImages || !isPlaying;
+  shuffleButton.disabled = !hasImages || images.length < 2;
+  playButton.setAttribute("aria-pressed", String(isPlaying));
+  playButton.classList.toggle("is-active", isPlaying);
+  shuffleButton.setAttribute("aria-pressed", String(shuffleEnabled));
+  shuffleButton.classList.toggle("is-active", shuffleEnabled);
   previousButton.disabled = activeIndex <= 0;
   nextButton.disabled = !canMoveNext();
 
@@ -159,7 +227,6 @@ async function renderActiveImage() {
     activeImage.alt = "";
     activeName.textContent = "";
     activePosition.textContent = "";
-    updateSummary();
     return;
   }
 
@@ -169,7 +236,7 @@ async function renderActiveImage() {
   activeName.textContent = image.name;
   activeName.title = image.path;
   activePosition.textContent = getPositionText();
-  updateSummary();
+  updateFrameOrientation();
 
   if (sourceMode === "server") {
     await maybePrefetchServerPage();
@@ -190,21 +257,7 @@ function getImageUrl(image) {
 
 function getPositionText() {
   const total = sourceMode === "server" && serverTotal ? serverTotal : images.length;
-  return `${activeIndex + 1} / ${total}`;
-}
-
-function updateSummary() {
-  if (!images.length) {
-    folderSummary.textContent = "No se encontraron imagenes en la carpeta seleccionada.";
-    return;
-  }
-
-  if (sourceMode === "server" && serverTotal) {
-    folderSummary.textContent = `${sourceLabel} · ${activeIndex + 1} de ${serverTotal} · ${images.length} cargadas`;
-    return;
-  }
-
-  folderSummary.textContent = `${sourceLabel} · ${activeIndex + 1} de ${images.length}`;
+  return `${activeIndex + 1}/${total}`;
 }
 
 async function selectImage(index) {
@@ -230,11 +283,76 @@ function showPrevious() {
 }
 
 function showNext() {
-  selectImage(activeIndex + 1);
+  selectImage(getNextIndex());
 }
 
 function canMoveNext() {
   return activeIndex < images.length - 1 || (sourceMode === "server" && serverHasMore);
+}
+
+function getNextIndex() {
+  if (!shuffleEnabled || images.length < 2) {
+    return activeIndex + 1;
+  }
+
+  let nextIndex = activeIndex;
+  while (nextIndex === activeIndex) {
+    nextIndex = Math.floor(Math.random() * images.length);
+  }
+
+  return nextIndex;
+}
+
+async function startSlideshow() {
+  if (!images.length) {
+    return;
+  }
+
+  stopSlideshow();
+  isPlaying = true;
+  playButton.setAttribute("aria-pressed", "true");
+  playButton.classList.add("is-active");
+  slideshowTimer = window.setInterval(playNextSlide, SLIDESHOW_INTERVAL_MS);
+  await renderActiveImage();
+}
+
+function stopSlideshow() {
+  if (slideshowTimer) {
+    window.clearInterval(slideshowTimer);
+    slideshowTimer = 0;
+  }
+
+  isPlaying = false;
+}
+
+async function stopSlideshowAndRender() {
+  stopSlideshow();
+  await renderActiveImage();
+}
+
+async function playNextSlide() {
+  if (!images.length) {
+    stopSlideshow();
+    await renderActiveImage();
+    return;
+  }
+
+  if (shuffleEnabled && sourceMode === "server" && serverHasMore && !serverLoading) {
+    await loadServerPage(images.length);
+  }
+
+  if (!shuffleEnabled && !canMoveNext()) {
+    stopSlideshow();
+    await renderActiveImage();
+    return;
+  }
+
+  await selectImage(getNextIndex());
+}
+
+async function toggleShuffle() {
+  shuffleEnabled = !shuffleEnabled;
+  await renderActiveImage();
 }
 
 async function maybePrefetchServerPage() {
@@ -245,7 +363,6 @@ async function maybePrefetchServerPage() {
   const remainingLoaded = images.length - activeIndex - 1;
   if (remainingLoaded <= PREFETCH_REMAINING) {
     await loadServerPage(images.length);
-    updateSummary();
   }
 }
 
@@ -255,22 +372,130 @@ async function toggleFullscreen() {
   }
 
   if (document.fullscreenElement) {
-    await document.exitFullscreen();
+    await exitFullscreenMode();
     return;
   }
 
-  await document.documentElement.requestFullscreen();
+  setZoom(100);
+  await renderActiveImage();
+  await enterFullscreenMode();
+}
+
+async function enterFullscreenMode() {
+  if (document.fullscreenElement) {
+    return;
+  }
+
+  try {
+    await document.documentElement.requestFullscreen();
+  } catch (error) {
+    // Fullscreen can be blocked if the browser no longer considers this a user gesture.
+  }
+}
+
+async function exitFullscreenMode() {
+  if (document.fullscreenElement) {
+    await document.exitFullscreen();
+  }
 }
 
 function updateFullscreenButton() {
-  fullscreenButton.textContent = document.fullscreenElement ? "Salir" : "Pantalla completa";
+  fullscreenButton.setAttribute(
+    "aria-label",
+    document.fullscreenElement ? "Salir de pantalla completa" : "Pantalla completa",
+  );
 }
 
 function setZoom(nextZoom) {
   zoom = Math.min(300, Math.max(25, nextZoom));
-  zoomRange.value = String(zoom);
+  if (zoom <= 100) {
+    panX = 0;
+    panY = 0;
+  }
+
   resetZoomButton.textContent = `${zoom}%`;
+  applyImageTransform();
+}
+
+function setThemePreference(theme, options = {}) {
+  const nextTheme = ["light", "dark", "auto"].includes(theme) ? theme : "auto";
+  document.documentElement.dataset.theme = nextTheme;
+  themeToggleButton.setAttribute("aria-label", getThemeLabel(nextTheme));
+
+  if (options.persist !== false) {
+    localStorage.setItem("imageVisorTheme", nextTheme);
+  }
+}
+
+function cycleThemePreference() {
+  const currentTheme = document.documentElement.dataset.theme || "auto";
+  const currentIndex = THEME_SEQUENCE.indexOf(currentTheme);
+  const nextTheme = THEME_SEQUENCE[(currentIndex + 1) % THEME_SEQUENCE.length];
+  setThemePreference(nextTheme);
+}
+
+function getThemeLabel(theme) {
+  const labels = {
+    auto: "Modo automático",
+    light: "Modo claro",
+    dark: "Modo oscuro",
+  };
+
+  return labels[theme] || labels.auto;
+}
+
+function applyImageTransform() {
   activeImage.style.setProperty("--zoom", String(zoom / 100));
+  activeImage.style.setProperty("--pan-x", `${panX}px`);
+  activeImage.style.setProperty("--pan-y", `${panY}px`);
+  imageViewport.classList.toggle("is-pannable", images.length > 0 && zoom > 100);
+}
+
+function updateFrameOrientation() {
+  if (!images.length || !activeImage.naturalWidth || !activeImage.naturalHeight) {
+    return;
+  }
+
+  const isPortrait = activeImage.naturalHeight > activeImage.naturalWidth;
+  photoFrame.classList.toggle("is-portrait", isPortrait);
+  photoFrame.classList.toggle("is-landscape", !isPortrait);
+}
+
+function startImageDrag(event) {
+  if (!images.length || zoom <= 100 || document.fullscreenElement) {
+    return;
+  }
+
+  dragState = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    panX,
+    panY,
+  };
+
+  imageViewport.classList.add("is-dragging");
+  imageViewport.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function dragImage(event) {
+  if (!dragState || dragState.pointerId !== event.pointerId) {
+    return;
+  }
+
+  panX = dragState.panX + event.clientX - dragState.startX;
+  panY = dragState.panY + event.clientY - dragState.startY;
+  applyImageTransform();
+}
+
+function endImageDrag(event) {
+  if (!dragState || dragState.pointerId !== event.pointerId) {
+    return;
+  }
+
+  dragState = null;
+  imageViewport.classList.remove("is-dragging");
 }
 
 function handleKeyboard(event) {
@@ -283,6 +508,9 @@ function handleKeyboard(event) {
     ArrowRight: showNext,
     f: toggleFullscreen,
     F: toggleFullscreen,
+    " ": () => (isPlaying ? stopSlideshowAndRender() : startSlideshow()),
+    r: toggleShuffle,
+    R: toggleShuffle,
     "+": () => setZoom(zoom + 10),
     "=": () => setZoom(zoom + 10),
     "-": () => setZoom(zoom - 10),
