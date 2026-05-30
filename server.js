@@ -2,8 +2,10 @@
 
 const fs = require("node:fs");
 const fsp = require("node:fs/promises");
+const { execFile } = require("node:child_process");
 const http = require("node:http");
 const path = require("node:path");
+const { promisify } = require("node:util");
 const { URL } = require("node:url");
 
 const IMAGE_EXTENSIONS = new Set([".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
@@ -23,7 +25,8 @@ const MIME_TYPES = {
 };
 
 const appRoot = __dirname;
-const imageRoot = path.resolve(process.argv[2] || process.cwd());
+const execFileAsync = promisify(execFile);
+let imageRoot = path.resolve(process.argv[2] || process.cwd());
 const port = Number(process.env.PORT || 5173);
 const host = process.env.HOST || "127.0.0.1";
 let imageManifestPromise;
@@ -34,6 +37,11 @@ const server = http.createServer(async (request, response) => {
 
     if (requestUrl.pathname === "/api/images") {
       await sendImageManifest(response, requestUrl);
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/select-folder") {
+      await selectImageFolder(request, response);
       return;
     }
 
@@ -66,7 +74,7 @@ async function sendImageManifest(response, requestUrl) {
   const page = images.slice(offset, offset + limit);
 
   sendJson(response, 200, {
-    root: path.basename(imageRoot) || imageRoot,
+    root: getRootLabel(),
     total: images.length,
     offset,
     limit,
@@ -76,12 +84,68 @@ async function sendImageManifest(response, requestUrl) {
   });
 }
 
+async function selectImageFolder(request, response) {
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  const selectedPath = await openFolderPicker();
+  if (!selectedPath) {
+    sendJson(response, 200, { cancelled: true, root: getRootLabel() });
+    return;
+  }
+
+  await setImageRoot(selectedPath);
+  sendJson(response, 200, {
+    cancelled: false,
+    root: getRootLabel(),
+    path: imageRoot,
+  });
+}
+
+async function openFolderPicker() {
+  if (process.platform !== "darwin") {
+    throw new Error("Folder picker is only implemented for macOS right now");
+  }
+
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      'POSIX path of (choose folder with prompt "Elige una carpeta de imagenes")',
+    ]);
+    return stdout.trim();
+  } catch (error) {
+    if (error.code === 1) {
+      return "";
+    }
+
+    throw error;
+  }
+}
+
+async function setImageRoot(nextRoot) {
+  const resolvedRoot = path.resolve(nextRoot);
+  const stat = await fsp.stat(resolvedRoot);
+
+  if (!stat.isDirectory()) {
+    throw new Error("Selected path is not a directory");
+  }
+
+  imageRoot = resolvedRoot;
+  imageManifestPromise = undefined;
+}
+
 function getImageManifest() {
   if (!imageManifestPromise) {
     imageManifestPromise = findImages(imageRoot);
   }
 
   return imageManifestPromise;
+}
+
+function getRootLabel() {
+  return path.basename(imageRoot) || imageRoot;
 }
 
 async function findImages(directory, baseDirectory = directory) {
