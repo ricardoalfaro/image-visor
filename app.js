@@ -23,6 +23,7 @@ const imageViewport = document.querySelector("#imageViewport");
 const activeImage = document.querySelector("#activeImage");
 const activeName = document.querySelector("#activeName");
 const activePosition = document.querySelector("#activePosition");
+const zoomSelection = document.querySelector("#zoomSelection");
 const previousButton = document.querySelector("#previousButton");
 const nextButton = document.querySelector("#nextButton");
 const serverButton = document.querySelector("#serverButton");
@@ -50,6 +51,13 @@ let slideshowTimer = 0;
 let panX = 0;
 let panY = 0;
 let dragState = null;
+let fullscreenSelection = null;
+let fullscreenZoom = {
+  active: false,
+  scale: 1,
+  x: 0,
+  y: 0,
+};
 
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
@@ -69,6 +77,7 @@ imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointerup", endImageDrag);
 imageViewport.addEventListener("pointercancel", endImageDrag);
 imageViewport.addEventListener("lostpointercapture", endImageDrag);
+imageViewport.addEventListener("dblclick", resetFullscreenZoom);
 activeImage.addEventListener("load", updateFrameOrientation);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
@@ -100,6 +109,7 @@ async function handleFolderSelection(event) {
 
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
+  resetFullscreenZoom();
   await renderActiveImage();
 }
 
@@ -236,6 +246,7 @@ async function renderActiveImage() {
   activeName.textContent = image.name;
   activeName.title = image.path;
   activePosition.textContent = getPositionText();
+  resetFullscreenZoom();
   updateFrameOrientation();
 
   if (sourceMode === "server") {
@@ -377,6 +388,7 @@ async function toggleFullscreen() {
   }
 
   setZoom(100);
+  resetFullscreenZoom();
   await renderActiveImage();
   await enterFullscreenMode();
 }
@@ -404,6 +416,11 @@ function updateFullscreenButton() {
     "aria-label",
     document.fullscreenElement ? "Salir de pantalla completa" : "Pantalla completa",
   );
+
+  if (!document.fullscreenElement) {
+    resetFullscreenZoom();
+    clearFullscreenSelection();
+  }
 }
 
 function setZoom(nextZoom) {
@@ -445,10 +462,20 @@ function getThemeLabel(theme) {
 }
 
 function applyImageTransform() {
-  activeImage.style.setProperty("--zoom", String(zoom / 100));
-  activeImage.style.setProperty("--pan-x", `${panX}px`);
-  activeImage.style.setProperty("--pan-y", `${panY}px`);
+  if (!activeImage) {
+    return;
+  }
+
+  const useFullscreenZoom = document.fullscreenElement && fullscreenZoom.active;
+  const nextZoom = useFullscreenZoom ? fullscreenZoom.scale : zoom / 100;
+  const nextPanX = useFullscreenZoom ? fullscreenZoom.x : panX;
+  const nextPanY = useFullscreenZoom ? fullscreenZoom.y : panY;
+
+  activeImage.style.setProperty("--zoom", String(nextZoom));
+  activeImage.style.setProperty("--pan-x", `${nextPanX}px`);
+  activeImage.style.setProperty("--pan-y", `${nextPanY}px`);
   imageViewport.classList.toggle("is-pannable", images.length > 0 && zoom > 100);
+  imageViewport.classList.toggle("is-fullscreen-zoomed", useFullscreenZoom);
 }
 
 function updateFrameOrientation() {
@@ -462,6 +489,11 @@ function updateFrameOrientation() {
 }
 
 function startImageDrag(event) {
+  if (document.fullscreenElement) {
+    startFullscreenSelection(event);
+    return;
+  }
+
   if (!images.length || zoom <= 100 || document.fullscreenElement) {
     return;
   }
@@ -480,6 +512,11 @@ function startImageDrag(event) {
 }
 
 function dragImage(event) {
+  if (fullscreenSelection) {
+    updateFullscreenSelection(event);
+    return;
+  }
+
   if (!dragState || dragState.pointerId !== event.pointerId) {
     return;
   }
@@ -490,12 +527,181 @@ function dragImage(event) {
 }
 
 function endImageDrag(event) {
+  if (fullscreenSelection) {
+    endFullscreenSelection(event);
+    return;
+  }
+
   if (!dragState || dragState.pointerId !== event.pointerId) {
     return;
   }
 
   dragState = null;
   imageViewport.classList.remove("is-dragging");
+}
+
+function startFullscreenSelection(event) {
+  if (!images.length || !document.fullscreenElement || event.button !== 0) {
+    return;
+  }
+
+  clearFullscreenSelection();
+  fullscreenSelection = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    currentX: event.clientX,
+    currentY: event.clientY,
+  };
+
+  imageViewport.classList.add("is-selecting");
+  imageViewport.setPointerCapture(event.pointerId);
+  updateZoomSelectionRect();
+  event.preventDefault();
+}
+
+function updateFullscreenSelection(event) {
+  if (!fullscreenSelection || fullscreenSelection.pointerId !== event.pointerId) {
+    return;
+  }
+
+  fullscreenSelection.currentX = event.clientX;
+  fullscreenSelection.currentY = event.clientY;
+  updateZoomSelectionRect();
+}
+
+function endFullscreenSelection(event) {
+  if (!fullscreenSelection || fullscreenSelection.pointerId !== event.pointerId) {
+    return;
+  }
+
+  fullscreenSelection.currentX = event.clientX;
+  fullscreenSelection.currentY = event.clientY;
+
+  const selection = getFullscreenSelectionRect();
+  clearFullscreenSelection();
+
+  if (selection.width < 18 || selection.height < 18) {
+    return;
+  }
+
+  zoomToFullscreenSelection(selection);
+}
+
+function updateZoomSelectionRect() {
+  const selection = getFullscreenSelectionRect();
+  zoomSelection.classList.remove("is-hidden");
+  zoomSelection.style.left = `${selection.left}px`;
+  zoomSelection.style.top = `${selection.top}px`;
+  zoomSelection.style.width = `${selection.width}px`;
+  zoomSelection.style.height = `${selection.height}px`;
+}
+
+function getFullscreenSelectionRect() {
+  const viewportRect = imageViewport.getBoundingClientRect();
+  const startX = clamp(fullscreenSelection.startX - viewportRect.left, 0, viewportRect.width);
+  const startY = clamp(fullscreenSelection.startY - viewportRect.top, 0, viewportRect.height);
+  const currentX = clamp(fullscreenSelection.currentX - viewportRect.left, 0, viewportRect.width);
+  const currentY = clamp(fullscreenSelection.currentY - viewportRect.top, 0, viewportRect.height);
+
+  return {
+    left: Math.min(startX, currentX),
+    top: Math.min(startY, currentY),
+    width: Math.abs(currentX - startX),
+    height: Math.abs(currentY - startY),
+  };
+}
+
+function zoomToFullscreenSelection(selection) {
+  const viewportRect = imageViewport.getBoundingClientRect();
+  const renderedRect = getRenderedImageRect(viewportRect);
+  const clippedSelection = intersectRects(selection, renderedRect);
+
+  if (!clippedSelection || clippedSelection.width < 18 || clippedSelection.height < 18) {
+    return;
+  }
+
+  const scale = Math.min(
+    viewportRect.width / clippedSelection.width,
+    viewportRect.height / clippedSelection.height,
+  );
+  const imageCenterX = renderedRect.left + renderedRect.width / 2;
+  const imageCenterY = renderedRect.top + renderedRect.height / 2;
+  const selectionCenterX = clippedSelection.left + clippedSelection.width / 2;
+  const selectionCenterY = clippedSelection.top + clippedSelection.height / 2;
+
+  fullscreenZoom = {
+    active: true,
+    scale,
+    x: (imageCenterX - selectionCenterX) * scale,
+    y: (imageCenterY - selectionCenterY) * scale,
+  };
+
+  applyImageTransform();
+}
+
+function getRenderedImageRect(viewportRect) {
+  const imageRatio = activeImage.naturalWidth / activeImage.naturalHeight;
+  const viewportRatio = viewportRect.width / viewportRect.height;
+
+  if (imageRatio > viewportRatio) {
+    const width = viewportRect.width;
+    const height = width / imageRatio;
+    return {
+      left: 0,
+      top: (viewportRect.height - height) / 2,
+      width,
+      height,
+    };
+  }
+
+  const height = viewportRect.height;
+  const width = height * imageRatio;
+  return {
+    left: (viewportRect.width - width) / 2,
+    top: 0,
+    width,
+    height,
+  };
+}
+
+function intersectRects(a, b) {
+  const left = Math.max(a.left, b.left);
+  const top = Math.max(a.top, b.top);
+  const right = Math.min(a.left + a.width, b.left + b.width);
+  const bottom = Math.min(a.top + a.height, b.top + b.height);
+
+  if (right <= left || bottom <= top) {
+    return null;
+  }
+
+  return {
+    left,
+    top,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+function resetFullscreenZoom() {
+  fullscreenZoom = {
+    active: false,
+    scale: 1,
+    x: 0,
+    y: 0,
+  };
+  applyImageTransform();
+}
+
+function clearFullscreenSelection() {
+  fullscreenSelection = null;
+  imageViewport.classList.remove("is-selecting");
+  zoomSelection.classList.add("is-hidden");
+  zoomSelection.removeAttribute("style");
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function handleKeyboard(event) {
@@ -514,7 +720,10 @@ function handleKeyboard(event) {
     "+": () => setZoom(zoom + 10),
     "=": () => setZoom(zoom + 10),
     "-": () => setZoom(zoom - 10),
-    0: () => setZoom(100),
+    0: () => {
+      setZoom(100);
+      resetFullscreenZoom();
+    },
   };
 
   const handler = keyMap[event.key];
