@@ -3,6 +3,7 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --photo-paper: #000000;
+  --photo-paper-text: #ffffff;
   --text: #000000;
   --muted: #666666;
   --line: #e8e8e8;
@@ -11,8 +12,8 @@
   --active: #000000;
   --active-text: #ffffff;
   --frame-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
-  --frame-landscape-width: min(80vw, calc(74vh * 4 / 3), 1040px);
-  --frame-portrait-height: min(70vh, calc(100vh - 330px), 760px);
+  --frame-landscape-width: min(86vw, calc(80vh * 4 / 3), 1180px);
+  --frame-portrait-height: min(80vh, calc(100vh - 260px), 860px);
   font-family: "Google Sans", "Product Sans", Arial, Helvetica, sans-serif;
 }
 
@@ -21,6 +22,7 @@
     --bg: #000000;
     --surface: #000000;
     --photo-paper: #ffffff;
+    --photo-paper-text: #000000;
     --text: #ffffff;
     --muted: #a6a6a6;
     --line: #202020;
@@ -37,6 +39,7 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --photo-paper: #000000;
+  --photo-paper-text: #ffffff;
   --text: #000000;
   --muted: #666666;
   --line: #e8e8e8;
@@ -52,6 +55,7 @@
   --bg: #000000;
   --surface: #000000;
   --photo-paper: #ffffff;
+  --photo-paper-text: #000000;
   --text: #ffffff;
   --muted: #a6a6a6;
   --line: #202020;
@@ -113,6 +117,7 @@ button {
   padding: 24px;
   text-align: center;
   pointer-events: none;
+  transition: filter 220ms ease, opacity 220ms ease;
 }
 
 .welcome-copy h1 {
@@ -122,6 +127,16 @@ button {
   font-weight: 700;
   line-height: 0.86;
   letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.has-loaded-images .welcome-copy {
+  opacity: 0.5;
+  filter: blur(18px);
+}
+
+.has-loaded-images .welcome-copy h1 {
+  animation: title-marquee 16s linear infinite alternate;
 }
 
 .stage {
@@ -135,30 +150,64 @@ button {
 }
 
 .photo-frame {
+  position: relative;
   width: var(--frame-landscape-width);
   aspect-ratio: 4 / 3;
   margin: 0;
   display: grid;
   place-items: center;
-  padding: clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) clamp(30px, 5vw, 48px);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  padding: clamp(16px, 3vw, 28px);
+  border: 0;
+  border-radius: 50px;
   background: var(--photo-paper);
   box-shadow: var(--frame-shadow);
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+.has-loaded-images .photo-frame {
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
 }
 
 .photo-frame.is-portrait {
   width: auto;
   height: var(--frame-portrait-height);
   max-width: 76vw;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: var(--image-ratio, 3 / 4);
 }
 
 .photo-frame.is-landscape {
   width: var(--frame-landscape-width);
   height: auto;
-  max-height: 74vh;
-  aspect-ratio: 4 / 3;
+  max-height: 80vh;
+  aspect-ratio: var(--image-ratio, 4 / 3);
+}
+
+.close-viewer-button {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  z-index: 3;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--photo-paper);
+  color: var(--photo-paper-text);
+  cursor: pointer;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+.close-viewer-button:hover {
+  background: var(--photo-paper);
+}
+
+.close-viewer-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .placeholder-image,
@@ -178,6 +227,7 @@ button {
   display: grid;
   place-items: center;
   background: #000000;
+  border-radius: 30px;
   touch-action: none;
   cursor: default;
 }
@@ -199,6 +249,7 @@ button {
   height: 100%;
   display: block;
   object-fit: contain;
+  border-radius: 30px;
   transform: translate(var(--pan-x, 0px), var(--pan-y, 0px)) scale(var(--zoom, 1));
   transform-origin: center center;
   user-select: none;
@@ -230,7 +281,7 @@ button {
 
 .overlay-text {
   position: absolute;
-  top: 12px;
+  top: 20px;
   max-width: calc(50% - 18px);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -240,12 +291,8 @@ button {
   line-height: 1;
 }
 
-.overlay-left {
-  left: 12px;
-}
-
 .overlay-right {
-  right: 12px;
+  left: 20px;
   text-align: right;
 }
 
@@ -254,6 +301,7 @@ button {
 }
 
 .nav-button {
+  display: none;
   position: absolute;
   top: 50%;
   width: 44px;
@@ -292,15 +340,20 @@ button {
 .bottom-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 18px;
   padding: 14px 24px 22px;
   border-top: 1px solid var(--line);
   background: var(--bg);
 }
 
-.bottom-actions,
 .controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bottom-actions {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -310,13 +363,33 @@ button {
   min-width: 0;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .controls {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  z-index: 3;
   flex: 0 0 auto;
   justify-content: flex-end;
   flex-wrap: nowrap;
+  max-width: calc(100% - 32px);
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 10px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  backdrop-filter: blur(18px);
+}
+
+.image-viewport.has-visible-controls .controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
 }
 
 .button,
@@ -438,6 +511,16 @@ svg {
   stroke: none;
 }
 
+@keyframes title-marquee {
+  from {
+    transform: translateX(-18vw);
+  }
+
+  to {
+    transform: translateX(18vw);
+  }
+}
+
 :fullscreen .app-shell {
   min-height: 100vh;
 }
@@ -445,7 +528,8 @@ svg {
 :fullscreen .theme-bar,
 :fullscreen .bottom-bar,
 :fullscreen .welcome-copy,
-:fullscreen .nav-button {
+:fullscreen .nav-button,
+:fullscreen .close-viewer-button {
   display: none;
 }
 
@@ -467,6 +551,10 @@ svg {
   display: none;
 }
 
+:fullscreen .controls {
+  display: none;
+}
+
 :fullscreen .image-viewport img {
   width: 100vw;
   height: 100vh;
@@ -475,10 +563,16 @@ svg {
 
 :fullscreen .image-viewport {
   cursor: crosshair;
+  height: 101vh;
+  border-radius: 0;
 }
 
 :fullscreen .image-viewport.is-fullscreen-zoomed {
-  cursor: zoom-out;
+  cursor: grab;
+}
+
+:fullscreen .image-viewport.is-fullscreen-zoomed.is-dragging {
+  cursor: grabbing;
 }
 
 @media (max-width: 760px) {
@@ -500,11 +594,11 @@ svg {
   }
 
   .photo-frame {
-    width: min(92vw, calc(62vh * 4 / 3));
+    width: min(92vw, calc(70vh * 4 / 3));
   }
 
   .photo-frame.is-portrait {
-    height: min(58vh, calc(100vh - 340px));
+    height: min(70vh, calc(100vh - 260px));
     max-width: 74vw;
   }
 
@@ -522,12 +616,8 @@ svg {
     padding: 12px 16px 16px;
   }
 
-  .bottom-actions,
   .controls {
     justify-content: flex-start;
-  }
-
-  .controls {
     flex-wrap: wrap;
   }
 }
