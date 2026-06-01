@@ -3,6 +3,7 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --photo-paper: #000000;
+  --photo-paper-text: #ffffff;
   --text: #000000;
   --muted: #666666;
   --line: #e8e8e8;
@@ -10,9 +11,15 @@
   --control-hover: #eeeeee;
   --active: #000000;
   --active-text: #ffffff;
+  --overlay-control: rgba(0, 0, 0, 0.36);
+  --overlay-control-hover: rgba(0, 0, 0, 0.52);
+  --overlay-control-active: rgba(255, 255, 255, 0.88);
+  --overlay-control-active-text: #000000;
   --frame-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
-  --frame-landscape-width: min(80vw, calc(74vh * 4 / 3), 1040px);
-  --frame-portrait-height: min(70vh, calc(100vh - 330px), 760px);
+  --frame-available-width: min(calc(100vw - 164px), 1004px);
+  --frame-landscape-height: min(99%, calc(var(--frame-available-width) * var(--image-inverse-aspect, 0.75)));
+  --frame-landscape-width: min(86vw, calc(80vh * 4 / 3), 1180px);
+  --frame-portrait-height: 99%;
   font-family: "Google Sans", "Product Sans", Arial, Helvetica, sans-serif;
 }
 
@@ -21,6 +28,7 @@
     --bg: #000000;
     --surface: #000000;
     --photo-paper: #ffffff;
+    --photo-paper-text: #000000;
     --text: #ffffff;
     --muted: #a6a6a6;
     --line: #202020;
@@ -28,6 +36,10 @@
     --control-hover: #1c1c1c;
     --active: #ffffff;
     --active-text: #000000;
+    --overlay-control: rgba(0, 0, 0, 0.38);
+    --overlay-control-hover: rgba(0, 0, 0, 0.56);
+    --overlay-control-active: rgba(255, 255, 255, 0.9);
+    --overlay-control-active-text: #000000;
     --frame-shadow: none;
   }
 }
@@ -37,6 +49,7 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --photo-paper: #000000;
+  --photo-paper-text: #ffffff;
   --text: #000000;
   --muted: #666666;
   --line: #e8e8e8;
@@ -44,6 +57,10 @@
   --control-hover: #eeeeee;
   --active: #000000;
   --active-text: #ffffff;
+  --overlay-control: rgba(0, 0, 0, 0.36);
+  --overlay-control-hover: rgba(0, 0, 0, 0.52);
+  --overlay-control-active: rgba(255, 255, 255, 0.88);
+  --overlay-control-active-text: #000000;
   --frame-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
 }
 
@@ -52,6 +69,7 @@
   --bg: #000000;
   --surface: #000000;
   --photo-paper: #ffffff;
+  --photo-paper-text: #000000;
   --text: #ffffff;
   --muted: #a6a6a6;
   --line: #202020;
@@ -59,6 +77,10 @@
   --control-hover: #1c1c1c;
   --active: #ffffff;
   --active-text: #000000;
+  --overlay-control: rgba(0, 0, 0, 0.38);
+  --overlay-control-hover: rgba(0, 0, 0, 0.56);
+  --overlay-control-active: rgba(255, 255, 255, 0.9);
+  --overlay-control-active-text: #000000;
   --frame-shadow: none;
 }
 
@@ -97,6 +119,7 @@ button {
 
 .viewer-layout {
   position: relative;
+  height: 100%;
   min-height: 0;
   display: grid;
   place-items: center;
@@ -113,6 +136,7 @@ button {
   padding: 24px;
   text-align: center;
   pointer-events: none;
+  transition: filter 220ms ease, opacity 220ms ease;
 }
 
 .welcome-copy h1 {
@@ -122,12 +146,23 @@ button {
   font-weight: 700;
   line-height: 0.86;
   letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.has-loaded-images .welcome-copy {
+  opacity: 0.5;
+  filter: blur(18px);
+}
+
+.has-loaded-images .welcome-copy h1 {
+  animation: title-marquee 16s linear infinite alternate;
 }
 
 .stage {
   position: relative;
   z-index: 1;
   width: min(1120px, 100%);
+  height: 100%;
   min-height: 0;
   display: grid;
   place-items: center;
@@ -135,30 +170,64 @@ button {
 }
 
 .photo-frame {
+  position: relative;
   width: var(--frame-landscape-width);
   aspect-ratio: 4 / 3;
   margin: 0;
   display: grid;
   place-items: center;
-  padding: clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) clamp(30px, 5vw, 48px);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  padding: clamp(16px, 3vw, 28px);
+  border: 0;
+  border-radius: 0;
   background: var(--photo-paper);
   box-shadow: var(--frame-shadow);
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+.has-loaded-images .photo-frame {
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.24);
+  transform: translateY(-2px);
 }
 
 .photo-frame.is-portrait {
   width: auto;
   height: var(--frame-portrait-height);
   max-width: 76vw;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: var(--image-ratio, 3 / 4);
 }
 
 .photo-frame.is-landscape {
-  width: var(--frame-landscape-width);
-  height: auto;
-  max-height: 74vh;
-  aspect-ratio: 4 / 3;
+  width: auto;
+  height: var(--frame-landscape-height);
+  max-width: 100%;
+  aspect-ratio: var(--image-ratio, 4 / 3);
+}
+
+.close-viewer-button {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  z-index: 3;
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--photo-paper);
+  color: var(--photo-paper-text);
+  cursor: pointer;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+.close-viewer-button:hover {
+  background: var(--photo-paper);
+}
+
+.close-viewer-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .placeholder-image,
@@ -178,6 +247,7 @@ button {
   display: grid;
   place-items: center;
   background: #000000;
+  border-radius: 0;
   touch-action: none;
   cursor: default;
 }
@@ -199,6 +269,7 @@ button {
   height: 100%;
   display: block;
   object-fit: contain;
+  border-radius: 0;
   transform: translate(var(--pan-x, 0px), var(--pan-y, 0px)) scale(var(--zoom, 1));
   transform-origin: center center;
   user-select: none;
@@ -208,7 +279,7 @@ button {
 .image-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.25), transparent 35%);
   color: #ffffff;
   opacity: 0;
   pointer-events: none;
@@ -230,7 +301,7 @@ button {
 
 .overlay-text {
   position: absolute;
-  top: 12px;
+  top: 20px;
   max-width: calc(50% - 18px);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -240,12 +311,8 @@ button {
   line-height: 1;
 }
 
-.overlay-left {
-  left: 12px;
-}
-
 .overlay-right {
-  right: 12px;
+  left: 20px;
   text-align: right;
 }
 
@@ -254,12 +321,11 @@ button {
 }
 
 .nav-button {
+  display: none;
   position: absolute;
   top: 50%;
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -292,31 +358,62 @@ button {
 .bottom-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 18px;
   padding: 14px 24px 22px;
   border-top: 1px solid var(--line);
   background: var(--bg);
 }
 
-.bottom-actions,
-.controls {
+.bottom-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.bottom-actions {
+  gap: 20px;
   min-width: 0;
   flex: 1 1 auto;
   flex-wrap: wrap;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .controls {
-  flex: 0 0 auto;
-  justify-content: flex-end;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   flex-wrap: nowrap;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+.image-viewport.has-visible-controls .controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.control-group-primary {
+  justify-content: flex-start;
+}
+
+.control-group-tools {
+  justify-content: flex-end;
 }
 
 .button,
@@ -332,7 +429,7 @@ button {
   background: var(--control);
   color: var(--text);
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
 }
 
 .button {
@@ -417,6 +514,33 @@ input[type="file"] {
   padding: 0 12px;
 }
 
+.controls .button,
+.controls .icon-button {
+  border: 0;
+  background: var(--overlay-control);
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.controls .button:hover:not(:disabled),
+.controls .icon-button:hover:not(:disabled) {
+  background: var(--overlay-control-hover);
+}
+
+.controls .icon-button.is-active,
+.controls .icon-button[aria-pressed="true"] {
+  background: var(--overlay-control-active);
+  color: var(--overlay-control-active-text);
+  text-shadow: none;
+}
+
+.controls .icon-button i {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .inline-warning {
   color: #b26a00;
   font-size: 13px;
@@ -432,10 +556,14 @@ svg {
   stroke-width: 1.8;
 }
 
-#playButton svg path,
-#stopButton svg rect {
-  fill: currentColor;
-  stroke: none;
+@keyframes title-marquee {
+  from {
+    transform: translateX(-18vw);
+  }
+
+  to {
+    transform: translateX(18vw);
+  }
 }
 
 :fullscreen .app-shell {
@@ -445,7 +573,8 @@ svg {
 :fullscreen .theme-bar,
 :fullscreen .bottom-bar,
 :fullscreen .welcome-copy,
-:fullscreen .nav-button {
+:fullscreen .nav-button,
+:fullscreen .close-viewer-button {
   display: none;
 }
 
@@ -467,6 +596,14 @@ svg {
   display: none;
 }
 
+:fullscreen .overlay-text {
+  display: none;
+}
+
+:fullscreen .controls {
+  display: none;
+}
+
 :fullscreen .image-viewport img {
   width: 100vw;
   height: 100vh;
@@ -475,13 +612,23 @@ svg {
 
 :fullscreen .image-viewport {
   cursor: crosshair;
+  height: 101vh;
+  border-radius: 0;
 }
 
 :fullscreen .image-viewport.is-fullscreen-zoomed {
-  cursor: zoom-out;
+  cursor: grab;
+}
+
+:fullscreen .image-viewport.is-fullscreen-zoomed.is-dragging {
+  cursor: grabbing;
 }
 
 @media (max-width: 760px) {
+  :root {
+    --frame-available-width: calc(100vw - 132px);
+  }
+
   .theme-bar {
     padding: 14px 16px 0;
   }
@@ -500,11 +647,11 @@ svg {
   }
 
   .photo-frame {
-    width: min(92vw, calc(62vh * 4 / 3));
+    width: min(92vw, calc(70vh * 4 / 3));
   }
 
   .photo-frame.is-portrait {
-    height: min(58vh, calc(100vh - 340px));
+    height: var(--frame-portrait-height);
     max-width: 74vw;
   }
 
@@ -522,12 +669,16 @@ svg {
     padding: 12px 16px 16px;
   }
 
-  .bottom-actions,
   .controls {
-    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
   }
 
-  .controls {
-    flex-wrap: wrap;
+  .control-group {
+    flex: 1 1 auto;
+  }
+
+  .control-group-tools {
+    justify-content: flex-end;
   }
 }

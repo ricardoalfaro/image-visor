@@ -21,13 +21,13 @@ const photoFrame = document.querySelector("#photoFrame");
 const placeholderImage = document.querySelector("#placeholderImage");
 const imageViewport = document.querySelector("#imageViewport");
 const activeImage = document.querySelector("#activeImage");
-const activeName = document.querySelector("#activeName");
 const activePosition = document.querySelector("#activePosition");
 const zoomSelection = document.querySelector("#zoomSelection");
 const previousButton = document.querySelector("#previousButton");
 const nextButton = document.querySelector("#nextButton");
 const serverButton = document.querySelector("#serverButton");
 const fullscreenButton = document.querySelector("#fullscreenButton");
+const controls = document.querySelector(".controls");
 const playButton = document.querySelector("#playButton");
 const stopButton = document.querySelector("#stopButton");
 const shuffleButton = document.querySelector("#shuffleButton");
@@ -35,6 +35,7 @@ const zoomOutButton = document.querySelector("#zoomOutButton");
 const zoomInButton = document.querySelector("#zoomInButton");
 const resetZoomButton = document.querySelector("#resetZoomButton");
 const themeToggleButton = document.querySelector("#themeToggleButton");
+const closeViewerButton = document.querySelector("#closeViewerButton");
 
 let images = [];
 let activeIndex = -1;
@@ -51,6 +52,7 @@ let slideshowTimer = 0;
 let panX = 0;
 let panY = 0;
 let dragState = null;
+let fullscreenPan = null;
 let fullscreenSelection = null;
 let fullscreenZoom = {
   active: false,
@@ -72,12 +74,16 @@ zoomOutButton.addEventListener("click", () => setZoom(zoom - 10));
 zoomInButton.addEventListener("click", () => setZoom(zoom + 10));
 resetZoomButton.addEventListener("click", () => setZoom(100));
 themeToggleButton.addEventListener("click", cycleThemePreference);
+closeViewerButton.addEventListener("click", closeViewer);
 imageViewport.addEventListener("pointerdown", startImageDrag);
 imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointerup", endImageDrag);
 imageViewport.addEventListener("pointercancel", endImageDrag);
 imageViewport.addEventListener("lostpointercapture", endImageDrag);
-imageViewport.addEventListener("dblclick", resetFullscreenZoom);
+imageViewport.addEventListener("click", toggleImageControls);
+imageViewport.addEventListener("dblclick", handleImageDoubleClick);
+controls.addEventListener("click", (event) => event.stopPropagation());
+controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
@@ -110,6 +116,22 @@ async function handleFolderSelection(event) {
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
   resetFullscreenZoom();
+  await renderActiveImage();
+}
+
+async function closeViewer() {
+  stopSlideshow();
+  clearActiveObjectUrl();
+  resetFullscreenZoom();
+  sourceMode = "local";
+  sourceLabel = "Carpeta local";
+  images = [];
+  activeIndex = -1;
+  serverTotal = 0;
+  serverHasMore = false;
+  serverLoading = false;
+  folderInput.value = "";
+  setZoom(100);
   await renderActiveImage();
 }
 
@@ -212,8 +234,10 @@ async function renderActiveImage() {
 
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
+  imageViewport.classList.remove("has-visible-controls");
   stage.classList.toggle("is-hidden", !hasImages);
   stage.classList.toggle("has-images", hasImages);
+  document.body.classList.toggle("has-loaded-images", hasImages);
   photoFrame.classList.toggle("is-portrait", false);
   photoFrame.classList.toggle("is-landscape", false);
 
@@ -235,7 +259,6 @@ async function renderActiveImage() {
     clearActiveObjectUrl();
     activeImage.removeAttribute("src");
     activeImage.alt = "";
-    activeName.textContent = "";
     activePosition.textContent = "";
     return;
   }
@@ -243,8 +266,6 @@ async function renderActiveImage() {
   const image = images[activeIndex];
   activeImage.src = getImageUrl(image);
   activeImage.alt = image.name;
-  activeName.textContent = image.name;
-  activeName.title = image.path;
   activePosition.textContent = getPositionText();
   resetFullscreenZoom();
   updateFrameOrientation();
@@ -303,6 +324,10 @@ function canMoveNext() {
 
 function getNextIndex() {
   if (!shuffleEnabled || images.length < 2) {
+    if (!canMoveNext() && images.length > 0) {
+      return 0;
+    }
+
     return activeIndex + 1;
   }
 
@@ -352,12 +377,6 @@ async function playNextSlide() {
     await loadServerPage(images.length);
   }
 
-  if (!shuffleEnabled && !canMoveNext()) {
-    stopSlideshow();
-    await renderActiveImage();
-    return;
-  }
-
   await selectImage(getNextIndex());
 }
 
@@ -393,6 +412,24 @@ async function toggleFullscreen() {
   await enterFullscreenMode();
 }
 
+async function handleImageDoubleClick(event) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  if (!images.length) {
+    return;
+  }
+
+  imageViewport.classList.remove("has-visible-controls");
+
+  if (document.fullscreenElement) {
+    resetFullscreenZoom();
+    return;
+  }
+
+  await toggleFullscreen();
+}
+
 async function enterFullscreenMode() {
   if (document.fullscreenElement) {
     return;
@@ -412,12 +449,18 @@ async function exitFullscreenMode() {
 }
 
 function updateFullscreenButton() {
+  const fullscreenIcon = fullscreenButton.querySelector("i");
+  const isFullscreen = Boolean(document.fullscreenElement);
+
   fullscreenButton.setAttribute(
     "aria-label",
-    document.fullscreenElement ? "Salir de pantalla completa" : "Pantalla completa",
+    isFullscreen ? "Salir de pantalla completa" : "Pantalla completa",
   );
 
-  if (!document.fullscreenElement) {
+  fullscreenIcon.classList.toggle("fa-expand", !isFullscreen);
+  fullscreenIcon.classList.toggle("fa-compress", isFullscreen);
+
+  if (!isFullscreen) {
     resetFullscreenZoom();
     clearFullscreenSelection();
   }
@@ -484,12 +527,19 @@ function updateFrameOrientation() {
   }
 
   const isPortrait = activeImage.naturalHeight > activeImage.naturalWidth;
+  photoFrame.style.setProperty("--image-ratio", `${activeImage.naturalWidth} / ${activeImage.naturalHeight}`);
+  photoFrame.style.setProperty("--image-inverse-aspect", String(activeImage.naturalHeight / activeImage.naturalWidth));
   photoFrame.classList.toggle("is-portrait", isPortrait);
   photoFrame.classList.toggle("is-landscape", !isPortrait);
 }
 
 function startImageDrag(event) {
   if (document.fullscreenElement) {
+    if (fullscreenZoom.active) {
+      startFullscreenPan(event);
+      return;
+    }
+
     startFullscreenSelection(event);
     return;
   }
@@ -511,7 +561,29 @@ function startImageDrag(event) {
   event.preventDefault();
 }
 
+function toggleImageControls(event) {
+  if (!images.length || document.fullscreenElement) {
+    return;
+  }
+
+  if (event.detail > 1) {
+    return;
+  }
+
+  if (dragState || fullscreenSelection || fullscreenPan) {
+    return;
+  }
+
+  event.stopPropagation();
+  imageViewport.classList.toggle("has-visible-controls");
+}
+
 function dragImage(event) {
+  if (fullscreenPan) {
+    updateFullscreenPan(event);
+    return;
+  }
+
   if (fullscreenSelection) {
     updateFullscreenSelection(event);
     return;
@@ -527,6 +599,11 @@ function dragImage(event) {
 }
 
 function endImageDrag(event) {
+  if (fullscreenPan) {
+    endFullscreenPan(event);
+    return;
+  }
+
   if (fullscreenSelection) {
     endFullscreenSelection(event);
     return;
@@ -537,6 +614,43 @@ function endImageDrag(event) {
   }
 
   dragState = null;
+  imageViewport.classList.remove("is-dragging");
+}
+
+function startFullscreenPan(event) {
+  if (!images.length || !document.fullscreenElement || event.button !== 0) {
+    return;
+  }
+
+  fullscreenPan = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    x: fullscreenZoom.x,
+    y: fullscreenZoom.y,
+  };
+
+  imageViewport.classList.add("is-dragging");
+  imageViewport.setPointerCapture(event.pointerId);
+  event.preventDefault();
+}
+
+function updateFullscreenPan(event) {
+  if (!fullscreenPan || fullscreenPan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  fullscreenZoom.x = fullscreenPan.x + event.clientX - fullscreenPan.startX;
+  fullscreenZoom.y = fullscreenPan.y + event.clientY - fullscreenPan.startY;
+  applyImageTransform();
+}
+
+function endFullscreenPan(event) {
+  if (!fullscreenPan || fullscreenPan.pointerId !== event.pointerId) {
+    return;
+  }
+
+  fullscreenPan = null;
   imageViewport.classList.remove("is-dragging");
 }
 
@@ -684,6 +798,7 @@ function intersectRects(a, b) {
 }
 
 function resetFullscreenZoom() {
+  fullscreenPan = null;
   fullscreenZoom = {
     active: false,
     scale: 1,
