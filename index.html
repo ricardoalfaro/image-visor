@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -41,25 +42,29 @@
               </div>
               <div id="zoomSelection" class="zoom-selection is-hidden" aria-hidden="true"></div>
               <div class="controls" aria-label="Controles del visualizador">
-                <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"></path></svg>
-                </button>
-                <button id="stopButton" class="icon-button" type="button" disabled aria-label="Detener">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
-                </button>
-                <button id="shuffleButton" class="icon-button" type="button" disabled aria-label="Aleatorio" aria-pressed="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5M4 20l5.5-5.5M15 4l6 6M4 4l16 16M16 21h5v-5"></path></svg>
-                </button>
-                <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M8 11h6M16.5 16.5 21 21"></path></svg>
-                </button>
-                <button id="resetZoomButton" class="button zoom-value" type="button" disabled>100%</button>
-                <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M11 8v6M8 11h6M16.5 16.5 21 21"></path></svg>
-                </button>
-                <button id="fullscreenButton" class="icon-button" type="button" disabled aria-label="Pantalla completa">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M21 8V3h-5M3 16v5h5M16 21h5v-5"></path></svg>
-                </button>
+                <div class="control-group control-group-primary">
+                  <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
+                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                  </button>
+                  <button id="stopButton" class="icon-button" type="button" disabled aria-label="Detener">
+                    <i class="fa-solid fa-stop" aria-hidden="true"></i>
+                  </button>
+                  <button id="shuffleButton" class="icon-button" type="button" disabled aria-label="Aleatorio" aria-pressed="false">
+                    <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <div class="control-group control-group-tools">
+                  <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">
+                    <i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i>
+                  </button>
+                  <button id="resetZoomButton" class="button zoom-value" type="button" disabled>100%</button>
+                  <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">
+                    <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
+                  </button>
+                  <button id="fullscreenButton" class="icon-button" type="button" disabled aria-label="Pantalla completa">
+                    <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </figure>

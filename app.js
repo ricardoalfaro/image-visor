@@ -449,12 +449,18 @@ async function exitFullscreenMode() {
 }
 
 function updateFullscreenButton() {
+  const fullscreenIcon = fullscreenButton.querySelector("i");
+  const isFullscreen = Boolean(document.fullscreenElement);
+
   fullscreenButton.setAttribute(
     "aria-label",
-    document.fullscreenElement ? "Salir de pantalla completa" : "Pantalla completa",
+    isFullscreen ? "Salir de pantalla completa" : "Pantalla completa",
   );
 
-  if (!document.fullscreenElement) {
+  fullscreenIcon.classList.toggle("fa-expand", !isFullscreen);
+  fullscreenIcon.classList.toggle("fa-compress", isFullscreen);
+
+  if (!isFullscreen) {
     resetFullscreenZoom();
     clearFullscreenSelection();
   }
@@ -522,6 +528,7 @@ function updateFrameOrientation() {
 
   const isPortrait = activeImage.naturalHeight > activeImage.naturalWidth;
   photoFrame.style.setProperty("--image-ratio", `${activeImage.naturalWidth} / ${activeImage.naturalHeight}`);
+  photoFrame.style.setProperty("--image-inverse-aspect", String(activeImage.naturalHeight / activeImage.naturalWidth));
   photoFrame.classList.toggle("is-portrait", isPortrait);
   photoFrame.classList.toggle("is-landscape", !isPortrait);
 }
