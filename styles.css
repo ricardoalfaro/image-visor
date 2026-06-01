@@ -259,7 +259,7 @@ button {
 .image-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.25), transparent 35%);
   color: #ffffff;
   opacity: 0;
   pointer-events: none;
@@ -306,8 +306,6 @@ button {
   top: 50%;
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -347,19 +345,10 @@ button {
   background: var(--bg);
 }
 
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .bottom-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.bottom-actions {
+  gap: 20px;
   min-width: 0;
   flex: 1 1 auto;
   flex-wrap: wrap;
@@ -368,28 +357,28 @@ button {
 
 .controls {
   position: absolute;
-  left: 50%;
-  bottom: 16px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 3;
-  flex: 0 0 auto;
-  justify-content: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   flex-wrap: nowrap;
-  max-width: calc(100% - 32px);
+  width: 100%;
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.42);
+  border: 0;
+  border-radius: 0;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, 10px);
-  transition: opacity 160ms ease, transform 160ms ease;
-  backdrop-filter: blur(18px);
+  transform: translateY(10px);
 }
 
 .image-viewport.has-visible-controls .controls {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
 .button,
@@ -551,6 +540,10 @@ svg {
   display: none;
 }
 
+:fullscreen .overlay-text {
+  display: none;
+}
+
 :fullscreen .controls {
   display: none;
 }
@@ -617,7 +610,7 @@ svg {
   }
 
   .controls {
-    justify-content: flex-start;
+    justify-content: center;
     flex-wrap: wrap;
   }
 }
