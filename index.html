@@ -22,7 +22,25 @@
 
       <section class="viewer-layout" aria-label="Visualizador de imágenes">
         <div class="welcome-copy">
-          <h1>Image Viewer<br>Pro</h1>
+          <div class="welcome-panel">
+            <svg class="welcome-frame" viewBox="0 0 520 760" aria-hidden="true">
+              <defs>
+                <linearGradient id="welcomeFrameGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ff4d6d"></stop>
+                  <stop offset="24%" stop-color="#ffb703"></stop>
+                  <stop offset="48%" stop-color="#2ec4b6"></stop>
+                  <stop offset="72%" stop-color="#3a86ff"></stop>
+                  <stop offset="100%" stop-color="#8338ec"></stop>
+                </linearGradient>
+              </defs>
+              <rect class="welcome-frame-line" x="42" y="34" width="436" height="692" rx="0"></rect>
+            </svg>
+            <h1>Image<br>Viewer Pro</h1>
+            <div class="welcome-actions">
+              <button id="serverButton" class="button primary" type="button">Elegir carpeta</button>
+              <span id="browserFolderWarning" class="inline-warning is-hidden">Evita carpetas demasiado grandes en este modo.</span>
+            </div>
+          </div>
         </div>
 
         <section id="stage" class="stage is-hidden">
@@ -78,16 +96,7 @@
         </section>
       </section>
 
-      <footer class="bottom-bar">
-        <div class="bottom-actions">
-          <button id="serverButton" class="button primary" type="button">Elegir una carpeta de imágenes</button>
-          <label id="browserFolderLink" class="text-link">
-            Abrir sin servidor
-            <input id="folderInput" type="file" accept="image/*,video/mp4,video/quicktime,video/mpeg,.m4v,.mov,.mp4,.mpeg,.mpg,.avif" webkitdirectory multiple>
-          </label>
-          <span id="browserFolderWarning" class="inline-warning is-hidden">Evita carpetas demasiado grandes en este modo.</span>
-        </div>
-      </footer>
+      <input id="folderInput" type="file" accept="image/*,video/mp4,video/quicktime,video/mpeg,.m4v,.mov,.mp4,.mpeg,.mpg,.avif" webkitdirectory multiple>
     </main>
 
     <script src="app.js"></script>
