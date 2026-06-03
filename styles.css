@@ -683,8 +683,8 @@ input[type="file"] {
 .controls .button,
 .controls .icon-button {
   border: 0;
-  border-radius: 1rem;
-  background: var(--overlay-control);
+  border-radius: 0.7rem;
+  background: transparent;
   color: #ffffff;
   font-weight: 700;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);

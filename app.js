@@ -824,7 +824,7 @@ function isActiveVideo() {
 }
 
 function startImageDrag(event) {
-  if (isActiveVideo()) {
+  if (!images.length || isActiveVideo() || event.button !== 0) {
     return;
   }
 
@@ -838,7 +838,12 @@ function startImageDrag(event) {
     return;
   }
 
-  if (!images.length || zoom <= 100 || document.fullscreenElement) {
+  if (zoom <= 100) {
+    startFullscreenSelection(event);
+    return;
+  }
+
+  if (document.fullscreenElement) {
     return;
   }
 
@@ -932,7 +937,7 @@ function endFullscreenPan(event) {
 }
 
 function startFullscreenSelection(event) {
-  if (!images.length || isActiveVideo() || !document.fullscreenElement || event.button !== 0) {
+  if (!images.length || isActiveVideo() || event.button !== 0) {
     return;
   }
 
@@ -1020,6 +1025,16 @@ function zoomToFullscreenSelection(selection) {
   const imageCenterY = renderedRect.top + renderedRect.height / 2;
   const selectionCenterX = clippedSelection.left + clippedSelection.width / 2;
   const selectionCenterY = clippedSelection.top + clippedSelection.height / 2;
+
+  if (!document.fullscreenElement) {
+    const nextScale = Math.min(3, Math.max(0.25, scale));
+    zoom = Math.round(nextScale * 100);
+    panX = (imageCenterX - selectionCenterX) * nextScale;
+    panY = (imageCenterY - selectionCenterY) * nextScale;
+    resetZoomButton.textContent = `${zoom}%`;
+    applyImageTransform();
+    return;
+  }
 
   fullscreenZoom = {
     active: true,
