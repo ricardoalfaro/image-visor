@@ -16,10 +16,8 @@ const VIDEO_TYPES = new Set([
 const IMAGE_EXTENSION_PATTERN = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 const VIDEO_EXTENSION_PATTERN = /\.(m4v|mov|mp4|mpe?g)$/i;
 
-const SERVER_PAGE_SIZE = 100;
-const PREFETCH_REMAINING = 12;
 const SLIDESHOW_INTERVAL_MS = 4000;
-const BROWSER_PICKER_WARNING = "Modo sin servidor: evita elegir una carpeta demasiado grande.";
+const BROWSER_PICKER_WARNING = "Tu navegador usara el selector de carpeta compatible.";
 const THEME_SEQUENCE = ["auto", "light", "dark"];
 
 const folderInput = document.querySelector("#folderInput");
@@ -54,12 +52,8 @@ let activeFolderPath = "";
 let activeIndex = -1;
 let zoom = 100;
 let sourceLabel = "Carpeta local";
-let sourceMode = "local";
 let currentObjectUrl = "";
 let folderThumbnailObjectUrls = [];
-let serverTotal = 0;
-let serverHasMore = false;
-let serverLoading = false;
 let isPlaying = false;
 let shuffleEnabled = false;
 let slideshowTimer = 0;
@@ -77,7 +71,7 @@ let fullscreenZoom = {
 
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
-serverButton.addEventListener("click", loadServerImages);
+serverButton.addEventListener("click", loadLocalFolder);
 previousButton.addEventListener("click", showPrevious);
 nextButton.addEventListener("click", showNext);
 fullscreenButton.addEventListener("click", toggleFullscreen);
@@ -111,27 +105,86 @@ async function handleBrowserFolderIntent() {
 }
 
 async function handleFolderSelection(event) {
+  const files = Array.from(event.target.files || []).map((file) => ({
+    file,
+    path: getLocalRelativePath(file),
+  }));
+  await loadLocalFiles(files, "Carpeta local");
+  folderInput.value = "";
+}
+
+async function loadLocalFolder() {
+  browserFolderWarning.classList.add("is-hidden");
+
+  if ("showDirectoryPicker" in window) {
+    serverButton.disabled = true;
+
+    try {
+      const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
+      const files = await collectDirectoryFiles(directoryHandle);
+      await loadLocalFiles(files, directoryHandle.name || "Carpeta local");
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        browserFolderWarning.classList.remove("is-hidden");
+        browserFolderWarning.textContent = "No se pudo abrir la carpeta local desde el navegador.";
+      }
+    } finally {
+      serverButton.disabled = false;
+    }
+
+    return;
+  }
+
+  browserFolderWarning.classList.remove("is-hidden");
+  browserFolderWarning.textContent = BROWSER_PICKER_WARNING;
+  folderInput.click();
+}
+
+async function collectDirectoryFiles(directoryHandle, parentPath = "") {
+  const files = [];
+
+  for await (const [name, handle] of directoryHandle.entries()) {
+    if (name.startsWith(".")) {
+      continue;
+    }
+
+    const path = parentPath ? `${parentPath}/${name}` : name;
+
+    if (handle.kind === "directory") {
+      files.push(...await collectDirectoryFiles(handle, path));
+      continue;
+    }
+
+    if (handle.kind !== "file") {
+      continue;
+    }
+
+    files.push({
+      file: await handle.getFile(),
+      path,
+    });
+  }
+
+  return files;
+}
+
+async function loadLocalFiles(files, label) {
   clearActiveObjectUrl();
   clearFolderThumbnailObjectUrls();
-  sourceMode = "local";
-  sourceLabel = "Carpeta local";
-  serverTotal = 0;
-  serverHasMore = false;
+  sourceLabel = label || "Carpeta local";
   stopSlideshow();
 
-  const files = Array.from(event.target.files || []);
   allMedia = files
-    .filter(isSupportedMedia)
-    .sort((a, b) => getDisplayPath(a).localeCompare(getDisplayPath(b), undefined, { numeric: true }))
-    .map((file) => {
-      const path = getLocalRelativePath(file);
+    .filter((item) => isSupportedMedia(item.file))
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
+    .map((item) => {
       return {
-        file,
-        name: file.name,
-        path,
-        type: getMediaType(file),
-        folder: getFolderPath(path),
-        groupFolder: getTopLevelFolder(path),
+        file: item.file,
+        name: item.file.name,
+        path: item.path,
+        type: getMediaType(item.file),
+        folder: getFolderPath(item.path),
+        groupFolder: getTopLevelFolder(item.path),
       };
     });
   folders = getFoldersFromMedia(allMedia);
@@ -149,111 +202,15 @@ async function closeViewer() {
   clearActiveObjectUrl();
   clearFolderThumbnailObjectUrls();
   resetFullscreenZoom();
-  sourceMode = "local";
   sourceLabel = "Carpeta local";
   images = [];
   allMedia = [];
   folders = [];
   activeFolderPath = "";
   activeIndex = -1;
-  serverTotal = 0;
-  serverHasMore = false;
-  serverLoading = false;
   folderInput.value = "";
   setZoom(100);
   await renderActiveImage();
-}
-
-async function loadServerImages() {
-  clearActiveObjectUrl();
-  clearFolderThumbnailObjectUrls();
-  browserFolderWarning.classList.add("is-hidden");
-  sourceMode = "server";
-  sourceLabel = "Servidor local";
-  images = [];
-  allMedia = [];
-  folders = [];
-  activeFolderPath = "";
-  activeIndex = -1;
-  serverTotal = 0;
-  serverHasMore = false;
-  stopSlideshow();
-  serverButton.disabled = true;
-
-  try {
-    const folderSelected = await selectServerFolder();
-    if (!folderSelected) {
-      renderActiveImage();
-      return;
-    }
-
-    await loadServerPage(0);
-    applyFolderFilter();
-    activeIndex = images.length > 0 ? 0 : -1;
-    setZoom(100);
-    await renderActiveImage();
-  } catch (error) {
-    images = [];
-    allMedia = [];
-    folders = [];
-    activeFolderPath = "";
-    activeIndex = -1;
-    renderActiveImage();
-    browserFolderWarning.classList.remove("is-hidden");
-    browserFolderWarning.textContent = "No se pudo elegir o cargar la carpeta desde el servidor local.";
-  } finally {
-    serverButton.disabled = false;
-  }
-}
-
-async function selectServerFolder() {
-  const response = await fetch("/api/select-folder", { method: "POST" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  const payload = await response.json();
-  if (payload.cancelled) {
-    return false;
-  }
-
-  sourceLabel = payload.root || "Servidor local";
-  return true;
-}
-
-async function loadServerPage(offset) {
-  if (serverLoading) {
-    return;
-  }
-
-  serverLoading = true;
-
-  try {
-    const response = await fetch(`/api/images?offset=${offset}&limit=${SERVER_PAGE_SIZE}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const payload = await response.json();
-    sourceLabel = payload.root || "Servidor local";
-    serverTotal = payload.total || payload.count || 0;
-    serverHasMore = Boolean(payload.hasMore);
-    folders = Array.isArray(payload.folders) ? payload.folders : folders;
-
-    const incoming = payload.images.map((image) => ({
-      name: image.name,
-      path: image.path,
-      url: image.url,
-      type: image.type || getMediaTypeFromName(image.name),
-      folder: image.folder || getFolderPath(image.path),
-      groupFolder: image.groupFolder || getTopLevelFolder(image.path),
-    }));
-
-    allMedia.push(...incoming);
-    applyFolderFilter({ keepIndex: true });
-  } finally {
-    serverLoading = false;
-  }
 }
 
 function isSupportedMedia(file) {
@@ -274,10 +231,6 @@ function getMediaType(file) {
   }
 
   return "image";
-}
-
-function getMediaTypeFromName(name) {
-  return VIDEO_EXTENSION_PATTERN.test(name) ? "video" : "image";
 }
 
 function getDisplayPath(file) {
@@ -340,10 +293,6 @@ function isInsideFolder(item, folderPath) {
 }
 
 async function selectFolder(path) {
-  if (sourceMode === "server" && serverHasMore) {
-    await loadRemainingServerPages();
-  }
-
   activeFolderPath = path;
   applyFolderFilter();
   activeIndex = images.length > 0 ? 0 : -1;
@@ -351,12 +300,6 @@ async function selectFolder(path) {
   setZoom(100);
   resetFullscreenZoom();
   await renderActiveImage();
-}
-
-async function loadRemainingServerPages() {
-  while (serverHasMore && !serverLoading) {
-    await loadServerPage(allMedia.length);
-  }
 }
 
 function renderFolderNav() {
@@ -413,10 +356,6 @@ function getFolderPreviewUrl(folderPath) {
 
   if (!preview) {
     return "";
-  }
-
-  if (sourceMode === "server") {
-    return preview.url;
   }
 
   const objectUrl = URL.createObjectURL(preview.file);
@@ -500,35 +439,22 @@ async function renderActiveImage() {
   resetFullscreenZoom();
   updateFrameOrientation();
 
-  if (sourceMode === "server") {
-    await maybePrefetchServerPage();
-    nextButton.disabled = !canMoveNext();
-  }
+  nextButton.disabled = !canMoveNext();
 }
 
 function getImageUrl(image) {
-  if (sourceMode === "server") {
-    clearActiveObjectUrl();
-    return image.url;
-  }
-
   clearActiveObjectUrl();
   currentObjectUrl = URL.createObjectURL(image.file);
   return currentObjectUrl;
 }
 
 function getPositionText() {
-  const total = activeFolderPath ? images.length : sourceMode === "server" && serverTotal ? serverTotal : images.length;
-  return `${activeIndex + 1}/${total}`;
+  return `${activeIndex + 1}/${images.length}`;
 }
 
 async function selectImage(index) {
   if (index < 0) {
     return;
-  }
-
-  if (sourceMode === "server" && index >= images.length && serverHasMore) {
-    await loadServerPage(images.length);
   }
 
   if (index >= images.length) {
@@ -581,7 +507,7 @@ async function handleVideoEnded() {
 }
 
 function canMoveNext() {
-  return activeIndex < images.length - 1 || (sourceMode === "server" && serverHasMore && !activeFolderPath);
+  return activeIndex < images.length - 1;
 }
 
 function getNextIndex() {
@@ -635,27 +561,12 @@ async function playNextSlide() {
     return;
   }
 
-  if (shuffleEnabled && sourceMode === "server" && serverHasMore && !serverLoading) {
-    await loadServerPage(images.length);
-  }
-
   await selectImage(getNextIndex());
 }
 
 async function toggleShuffle() {
   shuffleEnabled = !shuffleEnabled;
   await renderActiveImage();
-}
-
-async function maybePrefetchServerPage() {
-  if (sourceMode !== "server" || !serverHasMore || serverLoading) {
-    return;
-  }
-
-  const remainingLoaded = images.length - activeIndex - 1;
-  if (remainingLoaded <= PREFETCH_REMAINING) {
-    await loadServerPage(images.length);
-  }
 }
 
 async function toggleFullscreen() {
