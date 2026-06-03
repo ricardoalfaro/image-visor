@@ -99,6 +99,7 @@ controls.addEventListener("click", (event) => event.stopPropagation());
 controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
 activeVideo.addEventListener("loadedmetadata", updateFrameOrientation);
+activeVideo.addEventListener("ended", handleVideoEnded);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("keydown", handleKeyboard);
@@ -444,8 +445,11 @@ async function renderActiveImage() {
   if (isVideo) {
     activeImage.removeAttribute("src");
     activeImage.alt = "";
+    activeVideo.autoplay = true;
+    activeVideo.loop = false;
     activeVideo.src = mediaUrl;
     activeVideo.load();
+    playActiveVideo();
   } else {
     activeVideo.pause();
     activeVideo.removeAttribute("src");
@@ -504,6 +508,38 @@ function showPrevious() {
 
 function showNext() {
   selectImage(getNextIndex());
+}
+
+async function playActiveVideo() {
+  if (!isActiveVideo()) {
+    return;
+  }
+
+  try {
+    activeVideo.muted = false;
+    await activeVideo.play();
+  } catch (error) {
+    try {
+      activeVideo.muted = true;
+      await activeVideo.play();
+    } catch (mutedError) {
+      // Autoplay can still be blocked by the browser.
+    }
+  }
+}
+
+async function handleVideoEnded() {
+  if (!isActiveVideo()) {
+    return;
+  }
+
+  if (canMoveNext()) {
+    await selectImage(getNextIndex());
+    return;
+  }
+
+  activeVideo.currentTime = 0;
+  await playActiveVideo();
 }
 
 function canMoveNext() {
@@ -604,7 +640,7 @@ async function handleImageDoubleClick(event) {
   event.preventDefault();
   event.stopPropagation();
 
-  if (!images.length) {
+  if (!images.length || isActiveVideo()) {
     return;
   }
 
@@ -784,7 +820,7 @@ function startImageDrag(event) {
 }
 
 function toggleImageControls(event) {
-  if (!images.length || document.fullscreenElement) {
+  if (!images.length || isActiveVideo() || document.fullscreenElement) {
     return;
   }
 
@@ -1044,6 +1080,25 @@ function clamp(value, min, max) {
 
 function handleKeyboard(event) {
   if (!images.length) {
+    return;
+  }
+
+  if (event.key === "Escape" && !document.fullscreenElement) {
+    event.preventDefault();
+    closeViewer();
+    return;
+  }
+
+  if (isActiveVideo()) {
+    const videoKeyMap = {
+      ArrowLeft: showPrevious,
+      ArrowRight: showNext,
+    };
+    const videoHandler = videoKeyMap[event.key];
+    if (videoHandler) {
+      event.preventDefault();
+      videoHandler();
+    }
     return;
   }
 

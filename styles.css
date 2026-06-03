@@ -286,6 +286,7 @@ button {
   transform-origin: center center;
   user-select: none;
   -webkit-user-drag: none;
+  width: 103%;
 }
 
 .image-viewport video {
@@ -294,6 +295,14 @@ button {
 
 .image-viewport.has-video {
   touch-action: auto;
+}
+
+.image-viewport.has-video .controls {
+  display: none;
+}
+
+.image-viewport .is-hidden {
+  display: none;
 }
 
 .image-overlay {
