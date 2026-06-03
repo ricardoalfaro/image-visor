@@ -597,16 +597,18 @@ button {
   font-weight: 500;
 }
 
-.welcome-button {
+.button.primary.welcome-button {
   min-height: 58px;
   padding: 0 30px;
-  border: 0;
+  border: none;
   border-radius: 1rem;
-  background: linear-gradient(115deg, #2ec4b6 0%, #3a86ff 70%, #8338ec 100%);
+  background: linear-gradient(115deg, #9900ff 0%, #0058ff 45%, #9900ff 100%);
+  background-size: 220% 220%;
   color: #ffffff;
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 14px 34px rgba(46, 196, 182, 0.28), 0 8px 24px rgba(58, 134, 255, 0.2);
+  box-shadow: 0 14px 34px rgba(153, 0, 255, 0.28), 0 8px 24px rgba(0, 88, 255, 0.24);
+  animation: welcome-button-gradient 3200ms ease-in-out infinite alternate;
 }
 
 .icon-button {
@@ -648,8 +650,9 @@ button {
   background: var(--active);
 }
 
-.welcome-button:hover:not(:disabled) {
-  background: linear-gradient(115deg, #35d7c7 0%, #4a94ff 70%, #8d47f0 100%);
+.button.primary.welcome-button:hover:not(:disabled) {
+  background: linear-gradient(115deg, #9900ff 0%, #0058ff 45%, #9900ff 100%);
+  background-size: 220% 220%;
 }
 
 .button:disabled,
@@ -743,6 +746,16 @@ svg {
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+@keyframes welcome-button-gradient {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 100% 50%;
   }
 }
 
