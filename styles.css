@@ -16,10 +16,14 @@
   --overlay-control-active: rgba(255, 255, 255, 0.88);
   --overlay-control-active-text: #000000;
   --frame-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
-  --frame-available-width: min(calc(100vw - 164px), 1004px);
-  --frame-landscape-height: min(99%, calc(var(--frame-available-width) * var(--image-inverse-aspect, 0.75)));
-  --frame-landscape-width: min(86vw, calc(80vh * 4 / 3), 1180px);
-  --frame-portrait-height: 99%;
+  --shell-padding-x: clamp(16px, 4vw, 24px);
+  --stage-side-padding: clamp(0px, 5vw, 58px);
+  --viewer-vertical-padding: clamp(18px, 5vh, 38px);
+  --frame-available-width: min(calc(100vw - (var(--shell-padding-x) * 2) - (var(--stage-side-padding) * 2)), 1120px);
+  --frame-available-height: calc(100dvh - 156px - (var(--viewer-vertical-padding) * 2));
+  --frame-landscape-height: min(var(--frame-available-height), calc(var(--frame-available-width) * var(--image-inverse-aspect, 0.75)));
+  --frame-landscape-width: min(var(--frame-available-width), calc(var(--frame-available-height) * var(--image-ratio-value, 1.333333)), 1180px);
+  --frame-portrait-height: min(var(--frame-available-height), 860px);
   font-family: "Google Sans", "Product Sans", Arial, Helvetica, sans-serif;
 }
 
@@ -91,6 +95,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--text);
 }
@@ -108,13 +113,14 @@ button {
   display: grid;
   grid-template-rows: auto 1fr auto;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
 }
 
 .theme-bar {
   display: flex;
   justify-content: flex-end;
-  padding: 18px 24px 0;
+  padding: 18px var(--shell-padding-x) 0;
 }
 
 .viewer-layout {
@@ -123,7 +129,7 @@ button {
   min-height: 0;
   display: grid;
   place-items: center;
-  padding: 38px 24px 34px;
+  padding: var(--viewer-vertical-padding) var(--shell-padding-x) calc(var(--viewer-vertical-padding) - 4px);
   overflow: hidden;
 }
 
@@ -142,7 +148,7 @@ button {
 .welcome-copy h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(88px, 17vw, 240px);
+  font-size: clamp(56px, 16vw, 240px);
   font-weight: 700;
   line-height: 0.86;
   letter-spacing: 0;
@@ -166,12 +172,14 @@ button {
   min-height: 0;
   display: grid;
   place-items: center;
-  padding: 0 58px;
+  padding: 0 var(--stage-side-padding);
 }
 
 .photo-frame {
   position: relative;
   width: var(--frame-landscape-width);
+  max-width: 100%;
+  max-height: var(--frame-available-height);
   aspect-ratio: 4 / 3;
   margin: 0;
   display: grid;
@@ -192,7 +200,7 @@ button {
 .photo-frame.is-portrait {
   width: auto;
   height: var(--frame-portrait-height);
-  max-width: 76vw;
+  max-width: min(76vw, var(--frame-available-width));
   aspect-ratio: var(--image-ratio, 3 / 4);
 }
 
@@ -205,11 +213,11 @@ button {
 
 .close-viewer-button {
   position: absolute;
-  top: -15px;
-  right: -15px;
+  top: clamp(-15px, -1.4vw, -8px);
+  right: clamp(-15px, -1.4vw, -8px);
   z-index: 3;
-  width: 60px;
-  height: 60px;
+  width: clamp(44px, 7vw, 60px);
+  height: clamp(44px, 7vw, 60px);
   display: grid;
   place-items: center;
   padding: 0;
@@ -360,7 +368,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: 14px 24px 22px;
+  padding: 14px var(--shell-padding-x) calc(16px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--bg);
 }
@@ -438,6 +446,7 @@ button {
   justify-content: center;
   padding: 0 18px;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .button.primary {
@@ -566,8 +575,137 @@ svg {
   }
 }
 
+@media (max-width: 760px) {
+  :root {
+    --shell-padding-x: 14px;
+    --stage-side-padding: 0px;
+    --viewer-vertical-padding: 16px;
+    --frame-available-height: calc(100dvh - 168px - (var(--viewer-vertical-padding) * 2));
+  }
+
+  .theme-bar {
+    padding-top: 12px;
+  }
+
+  .welcome-copy {
+    padding: 18px;
+  }
+
+  .welcome-copy h1 {
+    font-size: clamp(36px, 12vw, 88px);
+    line-height: 0.9;
+  }
+
+  .stage {
+    width: 100%;
+  }
+
+  .photo-frame {
+    padding: clamp(10px, 3vw, 16px);
+  }
+
+  .photo-frame.is-portrait {
+    max-width: var(--frame-available-width);
+  }
+
+  .close-viewer-button {
+    top: -8px;
+    right: -8px;
+  }
+
+  .bottom-actions {
+    gap: 10px 16px;
+  }
+
+  .button.primary {
+    width: min(100%, 320px);
+  }
+
+  .inline-warning {
+    width: 100%;
+    text-align: center;
+  }
+
+  .controls {
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .control-group {
+    gap: 6px;
+  }
+
+  .controls .icon-button,
+  .controls .button,
+  .icon-button {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .zoom-value {
+    min-width: 56px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .overlay-text {
+    top: 12px;
+    left: 12px;
+    max-width: calc(100% - 24px);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --frame-available-height: calc(100dvh - 182px - (var(--viewer-vertical-padding) * 2));
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .control-group {
+    justify-content: center;
+  }
+
+  .control-group-primary,
+  .control-group-tools {
+    justify-content: center;
+  }
+
+  .text-link {
+    min-height: 32px;
+  }
+}
+
+@media (max-height: 560px) {
+  :root {
+    --viewer-vertical-padding: 10px;
+    --frame-available-height: calc(100dvh - 118px - (var(--viewer-vertical-padding) * 2));
+  }
+
+  .theme-bar {
+    padding-top: 8px;
+  }
+
+  .bottom-bar {
+    padding-top: 8px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .button,
+  .icon-button,
+  .text-link {
+    min-height: 38px;
+  }
+}
+
 :fullscreen .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 :fullscreen .theme-bar,
@@ -584,6 +722,7 @@ svg {
 :fullscreen .image-viewport {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   max-width: none;
   max-height: none;
   aspect-ratio: auto;
@@ -607,12 +746,13 @@ svg {
 :fullscreen .image-viewport img {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   object-fit: contain;
 }
 
 :fullscreen .image-viewport {
   cursor: crosshair;
-  height: 101vh;
+  height: 100dvh;
   border-radius: 0;
 }
 
@@ -622,63 +762,4 @@ svg {
 
 :fullscreen .image-viewport.is-fullscreen-zoomed.is-dragging {
   cursor: grabbing;
-}
-
-@media (max-width: 760px) {
-  :root {
-    --frame-available-width: calc(100vw - 132px);
-  }
-
-  .theme-bar {
-    padding: 14px 16px 0;
-  }
-
-  .viewer-layout {
-    padding: 30px 16px 24px;
-  }
-
-  .welcome-copy h1 {
-    font-size: clamp(58px, 21vw, 120px);
-  }
-
-  .stage {
-    width: 100%;
-    padding: 0 50px;
-  }
-
-  .photo-frame {
-    width: min(92vw, calc(70vh * 4 / 3));
-  }
-
-  .photo-frame.is-portrait {
-    height: var(--frame-portrait-height);
-    max-width: 74vw;
-  }
-
-  .previous {
-    left: 0;
-  }
-
-  .next {
-    right: 0;
-  }
-
-  .bottom-bar {
-    align-items: stretch;
-    flex-direction: column;
-    padding: 12px 16px 16px;
-  }
-
-  .controls {
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .control-group {
-    flex: 1 1 auto;
-  }
-
-  .control-group-tools {
-    justify-content: flex-end;
-  }
 }

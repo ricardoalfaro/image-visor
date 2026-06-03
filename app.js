@@ -527,7 +527,9 @@ function updateFrameOrientation() {
   }
 
   const isPortrait = activeImage.naturalHeight > activeImage.naturalWidth;
+  const imageRatioValue = activeImage.naturalWidth / activeImage.naturalHeight;
   photoFrame.style.setProperty("--image-ratio", `${activeImage.naturalWidth} / ${activeImage.naturalHeight}`);
+  photoFrame.style.setProperty("--image-ratio-value", String(imageRatioValue));
   photoFrame.style.setProperty("--image-inverse-aspect", String(activeImage.naturalHeight / activeImage.naturalWidth));
   photoFrame.classList.toggle("is-portrait", isPortrait);
   photoFrame.classList.toggle("is-landscape", !isPortrait);
