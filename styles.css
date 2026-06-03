@@ -247,11 +247,12 @@ button {
   margin: 0;
   display: grid;
   place-items: center;
-  padding: clamp(16px, 3vw, 28px);
+  padding: 0;
   border: 0;
-  border-radius: 0;
-  background: var(--photo-paper);
+  border-radius: 1rem;
+  background: transparent;
   box-shadow: var(--frame-shadow);
+  overflow: hidden;
   transition: box-shadow 220ms ease, transform 220ms ease;
 }
 
@@ -309,6 +310,7 @@ button {
 
 .placeholder-image {
   display: block;
+  border-radius: 1rem;
   object-fit: cover;
 }
 
@@ -318,7 +320,7 @@ button {
   display: grid;
   place-items: center;
   background: #000000;
-  border-radius: 0;
+  border-radius: 1rem;
   touch-action: none;
   cursor: default;
 }
@@ -341,7 +343,7 @@ button {
   height: 100%;
   display: block;
   object-fit: contain;
-  border-radius: 0;
+  border-radius: 1rem;
 }
 
 .image-viewport img {
