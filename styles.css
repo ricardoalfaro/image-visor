@@ -481,8 +481,8 @@ button {
   border-radius: 999px;
   background: var(--photo-paper);
   cursor: pointer;
-  box-shadow: 0 0 0 1px var(--photo-paper-text), 0 6px 18px rgba(0, 0, 0, 0.18);
-  transition: transform 140ms ease, opacity 140ms ease, box-shadow 140ms ease;
+  box-shadow: none;
+  transition: transform 140ms ease, opacity 140ms ease;
 }
 
 .folder-button:hover {
@@ -490,7 +490,7 @@ button {
 }
 
 .folder-button.is-active {
-  box-shadow: 0 0 0 3px var(--photo-paper-text), 0 6px 18px rgba(0, 0, 0, 0.2);
+  opacity: 0.58;
 }
 
 .bottom-bar {
