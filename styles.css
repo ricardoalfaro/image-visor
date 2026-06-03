@@ -164,11 +164,11 @@ button {
 
 .welcome-frame {
   position: absolute;
-  top: calc(var(--welcome-title-size) * -0.26);
+  top: calc(var(--welcome-title-size) * -0.34);
   left: 50%;
   z-index: 0;
   width: 890px;
-  height: 710px;
+  height: 760px;
   overflow: visible;
   transform: translateX(-50%);
   pointer-events: none;
@@ -207,7 +207,7 @@ button {
 .welcome-actions {
   position: absolute;
   left: 50%;
-  top: calc((var(--welcome-title-size) * -0.26) + 710px - 22px);
+  top: calc((var(--welcome-title-size) * -0.34) + 760px - 60px);
   z-index: 2;
   display: grid;
   justify-items: center;
@@ -737,7 +737,7 @@ svg {
   }
 
   .welcome-actions {
-    top: calc((var(--welcome-title-size) * -0.26) + (var(--welcome-title-size) * 1.84) - 20px);
+    top: calc((var(--welcome-title-size) * -0.34) + (var(--welcome-title-size) * 1.84) - 50px);
   }
 
   .welcome-frame-line {
