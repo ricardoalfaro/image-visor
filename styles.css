@@ -111,16 +111,19 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr;
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--bg);
 }
 
 .theme-bar {
+  position: absolute;
+  top: 18px;
+  right: var(--shell-padding-x);
+  z-index: 5;
   display: flex;
   justify-content: flex-end;
-  padding: 18px var(--shell-padding-x) 0;
 }
 
 .viewer-layout {
@@ -130,7 +133,7 @@ button {
   display: grid;
   place-items: center;
   padding: var(--viewer-vertical-padding) var(--shell-padding-x) calc(var(--viewer-vertical-padding) - 4px);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .welcome-copy {
@@ -147,24 +150,25 @@ button {
 .welcome-panel {
   position: relative;
   width: 100%;
+  height: 100%;
   min-height: min(78vh, 760px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   padding: clamp(40px, 8vh, 78px) clamp(20px, 4vw, 42px) clamp(34px, 6vh, 56px);
   pointer-events: auto;
 }
 
 .welcome-title {
-  position: relative;
-  display: inline-block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
   --welcome-title-size: 300px;
-  transform: translateY(clamp(-130px, -16vh, -70px));
+  transform: translate(-50%, -50%);
 }
 
 .welcome-frame {
   position: absolute;
-  top: calc(var(--welcome-title-size) * -0.34);
+  top: calc(var(--welcome-title-size) * -0.6);
   left: 50%;
   z-index: 0;
   width: 890px;
@@ -207,7 +211,7 @@ button {
 .welcome-actions {
   position: absolute;
   left: 50%;
-  top: calc((var(--welcome-title-size) * -0.34) + 760px - 60px);
+  top: calc((var(--welcome-title-size) * -0.6) + 760px - 74px);
   z-index: 2;
   display: grid;
   justify-items: center;
@@ -465,8 +469,8 @@ button {
   flex-direction: column;
   gap: 10px;
   max-height: min(58vh, 420px);
-  padding: 6px;
-  overflow: auto;
+  padding: 10px 72px 10px 6px;
+  overflow: visible;
   transform: translateY(-50%);
 }
 
@@ -480,13 +484,19 @@ button {
   border: 0;
   border-radius: 999px;
   background: var(--photo-paper);
+  background-position: center;
+  background-size: cover;
   cursor: pointer;
   box-shadow: none;
-  transition: transform 140ms ease, opacity 140ms ease;
+  transform-origin: left center;
+  transition: width 220ms ease, height 220ms ease, border-radius 220ms ease, opacity 140ms ease, transform 220ms ease;
 }
 
 .folder-button:hover {
-  transform: scale(1.18);
+  width: 65px;
+  height: 65px;
+  border-radius: 1rem;
+  transform: translateX(4px);
 }
 
 .folder-button.is-active {
@@ -728,7 +738,7 @@ svg {
   }
 
   .theme-bar {
-    padding-top: 12px;
+    top: 12px;
   }
 
   .welcome-copy {
@@ -747,7 +757,7 @@ svg {
   }
 
   .welcome-actions {
-    top: calc((var(--welcome-title-size) * -0.34) + (var(--welcome-title-size) * 1.84) - 50px);
+    top: calc((var(--welcome-title-size) * -0.6) + (var(--welcome-title-size) * 1.84) - 50px);
   }
 
   .welcome-frame-line {

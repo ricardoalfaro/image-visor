@@ -56,6 +56,7 @@ let zoom = 100;
 let sourceLabel = "Carpeta local";
 let sourceMode = "local";
 let currentObjectUrl = "";
+let folderThumbnailObjectUrls = [];
 let serverTotal = 0;
 let serverHasMore = false;
 let serverLoading = false;
@@ -111,6 +112,7 @@ async function handleBrowserFolderIntent() {
 
 async function handleFolderSelection(event) {
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   sourceMode = "local";
   sourceLabel = "Carpeta local";
   serverTotal = 0;
@@ -145,6 +147,7 @@ async function handleFolderSelection(event) {
 async function closeViewer() {
   stopSlideshow();
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   resetFullscreenZoom();
   sourceMode = "local";
   sourceLabel = "Carpeta local";
@@ -163,6 +166,7 @@ async function closeViewer() {
 
 async function loadServerImages() {
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   browserFolderWarning.classList.add("is-hidden");
   sourceMode = "server";
   sourceLabel = "Servidor local";
@@ -357,6 +361,7 @@ async function loadRemainingServerPages() {
 
 function renderFolderNav() {
   const hasFolders = folders.length > 0;
+  clearFolderThumbnailObjectUrls();
   folderNav.classList.toggle("is-hidden", !hasFolders);
   folderNav.innerHTML = "";
 
@@ -368,6 +373,7 @@ function renderFolderNav() {
     title: "Ver todo el contenido",
     isActive: activeFolderPath === "",
     path: "",
+    thumbnailUrl: getFolderPreviewUrl(""),
   });
   folderNav.append(allButton);
 
@@ -376,11 +382,12 @@ function renderFolderNav() {
       title: `${folder.path} (${folder.count})`,
       isActive: activeFolderPath === folder.path,
       path: folder.path,
+      thumbnailUrl: getFolderPreviewUrl(folder.path),
     }));
   });
 }
 
-function createFolderButton({ title, isActive, path }) {
+function createFolderButton({ title, isActive, path, thumbnailUrl }) {
   const button = document.createElement("button");
   button.className = "folder-button";
   button.type = "button";
@@ -388,8 +395,41 @@ function createFolderButton({ title, isActive, path }) {
   button.setAttribute("aria-label", title);
   button.setAttribute("aria-pressed", String(isActive));
   button.classList.toggle("is-active", isActive);
+  if (thumbnailUrl) {
+    button.style.backgroundImage = `url("${thumbnailUrl}")`;
+  }
   button.addEventListener("click", () => selectFolder(path));
   return button;
+}
+
+function getFolderPreviewUrl(folderPath) {
+  const preview = allMedia.find((item) => {
+    if (item.type !== "image") {
+      return false;
+    }
+
+    return folderPath ? item.groupFolder === folderPath : true;
+  });
+
+  if (!preview) {
+    return "";
+  }
+
+  if (sourceMode === "server") {
+    return preview.url;
+  }
+
+  const objectUrl = URL.createObjectURL(preview.file);
+  folderThumbnailObjectUrls.push(objectUrl);
+  return objectUrl;
+}
+
+function clearFolderThumbnailObjectUrls() {
+  for (const objectUrl of folderThumbnailObjectUrls) {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  folderThumbnailObjectUrls = [];
 }
 
 async function renderActiveImage() {
