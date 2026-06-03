@@ -184,7 +184,7 @@ button {
   stroke-dasharray: 2608;
   stroke-dashoffset: 2608;
   stroke-linecap: square;
-  stroke-linejoin: miter;
+  stroke-linejoin: round;
   stroke-width: 8;
   animation: draw-welcome-frame 1500ms cubic-bezier(0.76, 0, 0.24, 1) 180ms forwards;
 }
@@ -597,6 +597,18 @@ button {
   font-weight: 500;
 }
 
+.welcome-button {
+  min-height: 58px;
+  padding: 0 30px;
+  border: 0;
+  border-radius: 1rem;
+  background: linear-gradient(115deg, #2ec4b6 0%, #3a86ff 70%, #8338ec 100%);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 14px 34px rgba(46, 196, 182, 0.28), 0 8px 24px rgba(58, 134, 255, 0.2);
+}
+
 .icon-button {
   width: 44px;
   height: 44px;
@@ -636,6 +648,10 @@ button {
   background: var(--active);
 }
 
+.welcome-button:hover:not(:disabled) {
+  background: linear-gradient(115deg, #35d7c7 0%, #4a94ff 70%, #8d47f0 100%);
+}
+
 .button:disabled,
 .icon-button:disabled {
   cursor: not-allowed;
@@ -667,6 +683,7 @@ input[type="file"] {
 .controls .button,
 .controls .icon-button {
   border: 0;
+  border-radius: 1rem;
   background: var(--overlay-control);
   color: #ffffff;
   font-weight: 700;

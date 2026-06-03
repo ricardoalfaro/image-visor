@@ -103,7 +103,7 @@ activeVideo.addEventListener("ended", handleVideoEnded);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("keydown", handleKeyboard);
-setThemePreference(localStorage.getItem("imageVisorTheme") || "auto", { persist: false });
+setThemePreference("auto", { persist: false });
 
 async function handleBrowserFolderIntent() {
   browserFolderWarning.classList.remove("is-hidden");
