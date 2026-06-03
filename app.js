@@ -7,6 +7,14 @@ const IMAGE_TYPES = new Set([
   "image/svg+xml",
   "image/webp",
 ]);
+const VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/mpeg",
+  "video/quicktime",
+  "video/x-m4v",
+]);
+const IMAGE_EXTENSION_PATTERN = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
+const VIDEO_EXTENSION_PATTERN = /\.(m4v|mov|mp4|mpe?g)$/i;
 
 const SERVER_PAGE_SIZE = 100;
 const PREFETCH_REMAINING = 12;
@@ -21,8 +29,10 @@ const photoFrame = document.querySelector("#photoFrame");
 const placeholderImage = document.querySelector("#placeholderImage");
 const imageViewport = document.querySelector("#imageViewport");
 const activeImage = document.querySelector("#activeImage");
+const activeVideo = document.querySelector("#activeVideo");
 const activePosition = document.querySelector("#activePosition");
 const zoomSelection = document.querySelector("#zoomSelection");
+const folderNav = document.querySelector("#folderNav");
 const previousButton = document.querySelector("#previousButton");
 const nextButton = document.querySelector("#nextButton");
 const serverButton = document.querySelector("#serverButton");
@@ -38,11 +48,15 @@ const themeToggleButton = document.querySelector("#themeToggleButton");
 const closeViewerButton = document.querySelector("#closeViewerButton");
 
 let images = [];
+let allMedia = [];
+let folders = [];
+let activeFolderPath = "";
 let activeIndex = -1;
 let zoom = 100;
 let sourceLabel = "Carpeta local";
 let sourceMode = "local";
 let currentObjectUrl = "";
+let folderThumbnailObjectUrls = [];
 let serverTotal = 0;
 let serverHasMore = false;
 let serverLoading = false;
@@ -80,15 +94,16 @@ imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointerup", endImageDrag);
 imageViewport.addEventListener("pointercancel", endImageDrag);
 imageViewport.addEventListener("lostpointercapture", endImageDrag);
-imageViewport.addEventListener("click", toggleImageControls);
 imageViewport.addEventListener("dblclick", handleImageDoubleClick);
 controls.addEventListener("click", (event) => event.stopPropagation());
 controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
+activeVideo.addEventListener("loadedmetadata", updateFrameOrientation);
+activeVideo.addEventListener("ended", handleVideoEnded);
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("keydown", handleKeyboard);
-setThemePreference(localStorage.getItem("imageVisorTheme") || "auto", { persist: false });
+setThemePreference("auto", { persist: false });
 
 async function handleBrowserFolderIntent() {
   browserFolderWarning.classList.remove("is-hidden");
@@ -97,6 +112,7 @@ async function handleBrowserFolderIntent() {
 
 async function handleFolderSelection(event) {
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   sourceMode = "local";
   sourceLabel = "Carpeta local";
   serverTotal = 0;
@@ -104,14 +120,23 @@ async function handleFolderSelection(event) {
   stopSlideshow();
 
   const files = Array.from(event.target.files || []);
-  images = files
-    .filter(isSupportedImage)
+  allMedia = files
+    .filter(isSupportedMedia)
     .sort((a, b) => getDisplayPath(a).localeCompare(getDisplayPath(b), undefined, { numeric: true }))
-    .map((file) => ({
-      file,
-      name: file.name,
-      path: getDisplayPath(file),
-    }));
+    .map((file) => {
+      const path = getLocalRelativePath(file);
+      return {
+        file,
+        name: file.name,
+        path,
+        type: getMediaType(file),
+        folder: getFolderPath(path),
+        groupFolder: getTopLevelFolder(path),
+      };
+    });
+  folders = getFoldersFromMedia(allMedia);
+  activeFolderPath = "";
+  applyFolderFilter();
 
   activeIndex = images.length > 0 ? 0 : -1;
   setZoom(100);
@@ -122,10 +147,14 @@ async function handleFolderSelection(event) {
 async function closeViewer() {
   stopSlideshow();
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   resetFullscreenZoom();
   sourceMode = "local";
   sourceLabel = "Carpeta local";
   images = [];
+  allMedia = [];
+  folders = [];
+  activeFolderPath = "";
   activeIndex = -1;
   serverTotal = 0;
   serverHasMore = false;
@@ -137,10 +166,14 @@ async function closeViewer() {
 
 async function loadServerImages() {
   clearActiveObjectUrl();
+  clearFolderThumbnailObjectUrls();
   browserFolderWarning.classList.add("is-hidden");
   sourceMode = "server";
   sourceLabel = "Servidor local";
   images = [];
+  allMedia = [];
+  folders = [];
+  activeFolderPath = "";
   activeIndex = -1;
   serverTotal = 0;
   serverHasMore = false;
@@ -155,11 +188,15 @@ async function loadServerImages() {
     }
 
     await loadServerPage(0);
+    applyFolderFilter();
     activeIndex = images.length > 0 ? 0 : -1;
     setZoom(100);
     await renderActiveImage();
   } catch (error) {
     images = [];
+    allMedia = [];
+    folders = [];
+    activeFolderPath = "";
     activeIndex = -1;
     renderActiveImage();
     browserFolderWarning.classList.remove("is-hidden");
@@ -201,40 +238,212 @@ async function loadServerPage(offset) {
     sourceLabel = payload.root || "Servidor local";
     serverTotal = payload.total || payload.count || 0;
     serverHasMore = Boolean(payload.hasMore);
+    folders = Array.isArray(payload.folders) ? payload.folders : folders;
 
     const incoming = payload.images.map((image) => ({
       name: image.name,
       path: image.path,
       url: image.url,
+      type: image.type || getMediaTypeFromName(image.name),
+      folder: image.folder || getFolderPath(image.path),
+      groupFolder: image.groupFolder || getTopLevelFolder(image.path),
     }));
 
-    images.push(...incoming);
+    allMedia.push(...incoming);
+    applyFolderFilter({ keepIndex: true });
   } finally {
     serverLoading = false;
   }
 }
 
-function isSupportedImage(file) {
+function isSupportedMedia(file) {
   if (IMAGE_TYPES.has(file.type)) {
     return true;
   }
 
-  return /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(file.name);
+  if (VIDEO_TYPES.has(file.type)) {
+    return true;
+  }
+
+  return IMAGE_EXTENSION_PATTERN.test(file.name) || VIDEO_EXTENSION_PATTERN.test(file.name);
+}
+
+function getMediaType(file) {
+  if (VIDEO_TYPES.has(file.type) || VIDEO_EXTENSION_PATTERN.test(file.name)) {
+    return "video";
+  }
+
+  return "image";
+}
+
+function getMediaTypeFromName(name) {
+  return VIDEO_EXTENSION_PATTERN.test(name) ? "video" : "image";
 }
 
 function getDisplayPath(file) {
   return file.webkitRelativePath || file.name;
 }
 
+function getLocalRelativePath(file) {
+  const displayPath = getDisplayPath(file);
+  const normalizedPath = displayPath.replace(/\\/g, "/");
+  const firstSlashIndex = normalizedPath.indexOf("/");
+
+  if (!file.webkitRelativePath || firstSlashIndex === -1) {
+    return normalizedPath;
+  }
+
+  return normalizedPath.slice(firstSlashIndex + 1);
+}
+
+function getFolderPath(filePath) {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  return lastSlashIndex === -1 ? "" : normalizedPath.slice(0, lastSlashIndex);
+}
+
+function getTopLevelFolder(filePath) {
+  const normalizedPath = filePath.replace(/\\/g, "/");
+  const firstSlashIndex = normalizedPath.indexOf("/");
+  return firstSlashIndex === -1 ? "" : normalizedPath.slice(0, firstSlashIndex);
+}
+
+function getFoldersFromMedia(media) {
+  const counts = new Map();
+
+  for (const item of media) {
+    if (!item.groupFolder) {
+      continue;
+    }
+
+    counts.set(item.groupFolder, (counts.get(item.groupFolder) || 0) + 1);
+  }
+
+  return Array.from(counts, ([path, count]) => ({ path, count }))
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+}
+
+function applyFolderFilter(options = {}) {
+  const previousItem = options.keepIndex ? images[activeIndex] : null;
+  images = activeFolderPath ? allMedia.filter((item) => isInsideFolder(item, activeFolderPath)) : [...allMedia];
+
+  if (previousItem) {
+    const nextIndex = images.findIndex((item) => item.path === previousItem.path);
+    activeIndex = nextIndex >= 0 ? nextIndex : Math.min(activeIndex, images.length - 1);
+  }
+
+  renderFolderNav();
+}
+
+function isInsideFolder(item, folderPath) {
+  return item.groupFolder === folderPath;
+}
+
+async function selectFolder(path) {
+  if (sourceMode === "server" && serverHasMore) {
+    await loadRemainingServerPages();
+  }
+
+  activeFolderPath = path;
+  applyFolderFilter();
+  activeIndex = images.length > 0 ? 0 : -1;
+  stopSlideshow();
+  setZoom(100);
+  resetFullscreenZoom();
+  await renderActiveImage();
+}
+
+async function loadRemainingServerPages() {
+  while (serverHasMore && !serverLoading) {
+    await loadServerPage(allMedia.length);
+  }
+}
+
+function renderFolderNav() {
+  const hasFolders = folders.length > 0;
+  clearFolderThumbnailObjectUrls();
+  folderNav.classList.toggle("is-hidden", !hasFolders);
+  folderNav.innerHTML = "";
+
+  if (!hasFolders) {
+    return;
+  }
+
+  const allButton = createFolderButton({
+    title: "Ver todo el contenido",
+    isActive: activeFolderPath === "",
+    path: "",
+    thumbnailUrl: getFolderPreviewUrl(""),
+  });
+  folderNav.append(allButton);
+
+  folders.forEach((folder, index) => {
+    folderNav.append(createFolderButton({
+      title: `${folder.path} (${folder.count})`,
+      isActive: activeFolderPath === folder.path,
+      path: folder.path,
+      thumbnailUrl: getFolderPreviewUrl(folder.path),
+    }));
+  });
+}
+
+function createFolderButton({ title, isActive, path, thumbnailUrl }) {
+  const button = document.createElement("button");
+  button.className = "folder-button";
+  button.type = "button";
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.setAttribute("aria-pressed", String(isActive));
+  button.classList.toggle("is-active", isActive);
+  if (thumbnailUrl) {
+    button.style.backgroundImage = `url("${thumbnailUrl}")`;
+  }
+  button.addEventListener("click", () => selectFolder(path));
+  return button;
+}
+
+function getFolderPreviewUrl(folderPath) {
+  const preview = allMedia.find((item) => {
+    if (item.type !== "image") {
+      return false;
+    }
+
+    return folderPath ? item.groupFolder === folderPath : true;
+  });
+
+  if (!preview) {
+    return "";
+  }
+
+  if (sourceMode === "server") {
+    return preview.url;
+  }
+
+  const objectUrl = URL.createObjectURL(preview.file);
+  folderThumbnailObjectUrls.push(objectUrl);
+  return objectUrl;
+}
+
+function clearFolderThumbnailObjectUrls() {
+  for (const objectUrl of folderThumbnailObjectUrls) {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  folderThumbnailObjectUrls = [];
+}
+
 async function renderActiveImage() {
   const hasImages = images.length > 0;
+  const activeMedia = hasImages ? images[activeIndex] : null;
+  const isVideo = activeMedia?.type === "video";
   if (!hasImages) {
     stopSlideshow();
   }
 
+  renderFolderNav();
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
-  imageViewport.classList.remove("has-visible-controls");
+  imageViewport.classList.toggle("has-video", Boolean(isVideo));
   stage.classList.toggle("is-hidden", !hasImages);
   stage.classList.toggle("has-images", hasImages);
   document.body.classList.toggle("has-loaded-images", hasImages);
@@ -242,9 +451,9 @@ async function renderActiveImage() {
   photoFrame.classList.toggle("is-landscape", false);
 
   fullscreenButton.disabled = !hasImages;
-  zoomOutButton.disabled = !hasImages;
-  zoomInButton.disabled = !hasImages;
-  resetZoomButton.disabled = !hasImages;
+  zoomOutButton.disabled = !hasImages || isVideo;
+  zoomInButton.disabled = !hasImages || isVideo;
+  resetZoomButton.disabled = !hasImages || isVideo;
   playButton.disabled = !hasImages || isPlaying;
   stopButton.disabled = !hasImages || !isPlaying;
   shuffleButton.disabled = !hasImages || images.length < 2;
@@ -259,13 +468,34 @@ async function renderActiveImage() {
     clearActiveObjectUrl();
     activeImage.removeAttribute("src");
     activeImage.alt = "";
+    activeVideo.pause();
+    activeVideo.removeAttribute("src");
+    activeVideo.load();
     activePosition.textContent = "";
     return;
   }
 
-  const image = images[activeIndex];
-  activeImage.src = getImageUrl(image);
-  activeImage.alt = image.name;
+  const image = activeMedia;
+  const mediaUrl = getImageUrl(image);
+  activeImage.classList.toggle("is-hidden", isVideo);
+  activeVideo.classList.toggle("is-hidden", !isVideo);
+
+  if (isVideo) {
+    activeImage.removeAttribute("src");
+    activeImage.alt = "";
+    activeVideo.autoplay = true;
+    activeVideo.loop = false;
+    activeVideo.src = mediaUrl;
+    activeVideo.load();
+    playActiveVideo();
+  } else {
+    activeVideo.pause();
+    activeVideo.removeAttribute("src");
+    activeVideo.load();
+    activeImage.src = mediaUrl;
+    activeImage.alt = image.name;
+  }
+
   activePosition.textContent = getPositionText();
   resetFullscreenZoom();
   updateFrameOrientation();
@@ -288,7 +518,7 @@ function getImageUrl(image) {
 }
 
 function getPositionText() {
-  const total = sourceMode === "server" && serverTotal ? serverTotal : images.length;
+  const total = activeFolderPath ? images.length : sourceMode === "server" && serverTotal ? serverTotal : images.length;
   return `${activeIndex + 1}/${total}`;
 }
 
@@ -318,8 +548,40 @@ function showNext() {
   selectImage(getNextIndex());
 }
 
+async function playActiveVideo() {
+  if (!isActiveVideo()) {
+    return;
+  }
+
+  try {
+    activeVideo.muted = false;
+    await activeVideo.play();
+  } catch (error) {
+    try {
+      activeVideo.muted = true;
+      await activeVideo.play();
+    } catch (mutedError) {
+      // Autoplay can still be blocked by the browser.
+    }
+  }
+}
+
+async function handleVideoEnded() {
+  if (!isActiveVideo()) {
+    return;
+  }
+
+  if (canMoveNext()) {
+    await selectImage(getNextIndex());
+    return;
+  }
+
+  activeVideo.currentTime = 0;
+  await playActiveVideo();
+}
+
 function canMoveNext() {
-  return activeIndex < images.length - 1 || (sourceMode === "server" && serverHasMore);
+  return activeIndex < images.length - 1 || (sourceMode === "server" && serverHasMore && !activeFolderPath);
 }
 
 function getNextIndex() {
@@ -416,11 +678,9 @@ async function handleImageDoubleClick(event) {
   event.preventDefault();
   event.stopPropagation();
 
-  if (!images.length) {
+  if (!images.length || isActiveVideo()) {
     return;
   }
-
-  imageViewport.classList.remove("has-visible-controls");
 
   if (document.fullscreenElement) {
     resetFullscreenZoom();
@@ -509,6 +769,11 @@ function applyImageTransform() {
     return;
   }
 
+  if (isActiveVideo()) {
+    imageViewport.classList.remove("is-pannable", "is-fullscreen-zoomed");
+    return;
+  }
+
   const useFullscreenZoom = document.fullscreenElement && fullscreenZoom.active;
   const nextZoom = useFullscreenZoom ? fullscreenZoom.scale : zoom / 100;
   const nextPanX = useFullscreenZoom ? fullscreenZoom.x : panX;
@@ -522,20 +787,47 @@ function applyImageTransform() {
 }
 
 function updateFrameOrientation() {
-  if (!images.length || !activeImage.naturalWidth || !activeImage.naturalHeight) {
+  if (!images.length) {
     return;
   }
 
-  const isPortrait = activeImage.naturalHeight > activeImage.naturalWidth;
-  const imageRatioValue = activeImage.naturalWidth / activeImage.naturalHeight;
-  photoFrame.style.setProperty("--image-ratio", `${activeImage.naturalWidth} / ${activeImage.naturalHeight}`);
+  const dimensions = getActiveMediaDimensions();
+  if (!dimensions.width || !dimensions.height) {
+    return;
+  }
+
+  const isPortrait = dimensions.height > dimensions.width;
+  const imageRatioValue = dimensions.width / dimensions.height;
+  photoFrame.style.setProperty("--image-ratio", `${dimensions.width} / ${dimensions.height}`);
   photoFrame.style.setProperty("--image-ratio-value", String(imageRatioValue));
-  photoFrame.style.setProperty("--image-inverse-aspect", String(activeImage.naturalHeight / activeImage.naturalWidth));
+  photoFrame.style.setProperty("--image-inverse-aspect", String(dimensions.height / dimensions.width));
   photoFrame.classList.toggle("is-portrait", isPortrait);
   photoFrame.classList.toggle("is-landscape", !isPortrait);
 }
 
+function getActiveMediaDimensions() {
+  if (isActiveVideo()) {
+    return {
+      width: activeVideo.videoWidth,
+      height: activeVideo.videoHeight,
+    };
+  }
+
+  return {
+    width: activeImage.naturalWidth,
+    height: activeImage.naturalHeight,
+  };
+}
+
+function isActiveVideo() {
+  return images[activeIndex]?.type === "video";
+}
+
 function startImageDrag(event) {
+  if (!images.length || isActiveVideo() || event.button !== 0) {
+    return;
+  }
+
   if (document.fullscreenElement) {
     if (fullscreenZoom.active) {
       startFullscreenPan(event);
@@ -546,7 +838,12 @@ function startImageDrag(event) {
     return;
   }
 
-  if (!images.length || zoom <= 100 || document.fullscreenElement) {
+  if (zoom <= 100) {
+    startFullscreenSelection(event);
+    return;
+  }
+
+  if (document.fullscreenElement) {
     return;
   }
 
@@ -561,23 +858,6 @@ function startImageDrag(event) {
   imageViewport.classList.add("is-dragging");
   imageViewport.setPointerCapture(event.pointerId);
   event.preventDefault();
-}
-
-function toggleImageControls(event) {
-  if (!images.length || document.fullscreenElement) {
-    return;
-  }
-
-  if (event.detail > 1) {
-    return;
-  }
-
-  if (dragState || fullscreenSelection || fullscreenPan) {
-    return;
-  }
-
-  event.stopPropagation();
-  imageViewport.classList.toggle("has-visible-controls");
 }
 
 function dragImage(event) {
@@ -620,7 +900,7 @@ function endImageDrag(event) {
 }
 
 function startFullscreenPan(event) {
-  if (!images.length || !document.fullscreenElement || event.button !== 0) {
+  if (!images.length || isActiveVideo() || !document.fullscreenElement || event.button !== 0) {
     return;
   }
 
@@ -657,7 +937,7 @@ function endFullscreenPan(event) {
 }
 
 function startFullscreenSelection(event) {
-  if (!images.length || !document.fullscreenElement || event.button !== 0) {
+  if (!images.length || isActiveVideo() || event.button !== 0) {
     return;
   }
 
@@ -746,6 +1026,16 @@ function zoomToFullscreenSelection(selection) {
   const selectionCenterX = clippedSelection.left + clippedSelection.width / 2;
   const selectionCenterY = clippedSelection.top + clippedSelection.height / 2;
 
+  if (!document.fullscreenElement) {
+    const nextScale = Math.min(3, Math.max(0.25, scale));
+    zoom = Math.round(nextScale * 100);
+    panX = (imageCenterX - selectionCenterX) * nextScale;
+    panY = (imageCenterY - selectionCenterY) * nextScale;
+    resetZoomButton.textContent = `${zoom}%`;
+    applyImageTransform();
+    return;
+  }
+
   fullscreenZoom = {
     active: true,
     scale,
@@ -757,7 +1047,8 @@ function zoomToFullscreenSelection(selection) {
 }
 
 function getRenderedImageRect(viewportRect) {
-  const imageRatio = activeImage.naturalWidth / activeImage.naturalHeight;
+  const dimensions = getActiveMediaDimensions();
+  const imageRatio = dimensions.width / dimensions.height;
   const viewportRatio = viewportRect.width / viewportRect.height;
 
   if (imageRatio > viewportRatio) {
@@ -826,6 +1117,25 @@ function handleKeyboard(event) {
     return;
   }
 
+  if (event.key === "Escape" && !document.fullscreenElement) {
+    event.preventDefault();
+    closeViewer();
+    return;
+  }
+
+  if (isActiveVideo()) {
+    const videoKeyMap = {
+      ArrowLeft: showPrevious,
+      ArrowRight: showNext,
+    };
+    const videoHandler = videoKeyMap[event.key];
+    if (videoHandler) {
+      event.preventDefault();
+      videoHandler();
+    }
+    return;
+  }
+
   const keyMap = {
     ArrowLeft: showPrevious,
     ArrowRight: showNext,
@@ -834,10 +1144,17 @@ function handleKeyboard(event) {
     " ": () => (isPlaying ? stopSlideshowAndRender() : startSlideshow()),
     r: toggleShuffle,
     R: toggleShuffle,
-    "+": () => setZoom(zoom + 10),
-    "=": () => setZoom(zoom + 10),
-    "-": () => setZoom(zoom - 10),
+    "+": () => {
+      if (!isActiveVideo()) setZoom(zoom + 10);
+    },
+    "=": () => {
+      if (!isActiveVideo()) setZoom(zoom + 10);
+    },
+    "-": () => {
+      if (!isActiveVideo()) setZoom(zoom - 10);
+    },
     0: () => {
+      if (isActiveVideo()) return;
       setZoom(100);
       resetFullscreenZoom();
     },

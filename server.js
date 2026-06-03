@@ -9,6 +9,8 @@ const { promisify } = require("node:util");
 const { URL } = require("node:url");
 
 const IMAGE_EXTENSIONS = new Set([".avif", ".bmp", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"]);
+const VIDEO_EXTENSIONS = new Set([".m4v", ".mov", ".mp4", ".mpeg", ".mpg"]);
+const MEDIA_EXTENSIONS = new Set([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS]);
 const MIME_TYPES = {
   ".avif": "image/avif",
   ".bmp": "image/bmp",
@@ -19,6 +21,11 @@ const MIME_TYPES = {
   ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".m4v": "video/x-m4v",
+  ".mov": "video/quicktime",
+  ".mp4": "video/mp4",
+  ".mpeg": "video/mpeg",
+  ".mpg": "video/mpeg",
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
@@ -45,8 +52,13 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (requestUrl.pathname.startsWith("/media/")) {
+      await sendMediaFile(requestUrl.pathname, response);
+      return;
+    }
+
     if (requestUrl.pathname.startsWith("/image/")) {
-      await sendImageFile(requestUrl.pathname, response);
+      await sendMediaFile(requestUrl.pathname, response);
       return;
     }
 
@@ -70,16 +82,17 @@ async function sendImageManifest(response, requestUrl) {
   const offset = Math.max(0, Number(requestUrl.searchParams.get("offset") || 0));
   const requestedLimit = Math.max(1, Number(requestUrl.searchParams.get("limit") || 100));
   const limit = Math.min(100, requestedLimit);
-  const images = await getImageManifest();
-  const page = images.slice(offset, offset + limit);
+  const media = await getImageManifest();
+  const page = media.slice(offset, offset + limit);
 
   sendJson(response, 200, {
     root: getRootLabel(),
-    total: images.length,
+    total: media.length,
     offset,
     limit,
     count: page.length,
-    hasMore: offset + page.length < images.length,
+    hasMore: offset + page.length < media.length,
+    folders: getFolders(media),
     images: page,
   });
 }
@@ -150,7 +163,7 @@ function getRootLabel() {
 
 async function findImages(directory, baseDirectory = directory) {
   const entries = await fsp.readdir(directory, { withFileTypes: true });
-  const images = [];
+  const media = [];
 
   for (const entry of entries) {
     if (entry.name.startsWith(".")) {
@@ -160,27 +173,51 @@ async function findImages(directory, baseDirectory = directory) {
     const fullPath = path.join(directory, entry.name);
 
     if (entry.isDirectory()) {
-      images.push(...await findImages(fullPath, baseDirectory));
+      media.push(...await findImages(fullPath, baseDirectory));
       continue;
     }
 
-    if (!entry.isFile() || !IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+    const extension = path.extname(entry.name).toLowerCase();
+    if (!entry.isFile() || !MEDIA_EXTENSIONS.has(extension)) {
       continue;
     }
 
     const relativePath = path.relative(baseDirectory, fullPath).split(path.sep).join("/");
-    images.push({
+    media.push({
       name: entry.name,
       path: relativePath,
-      url: `/image/${encodePath(relativePath)}`,
+      type: VIDEO_EXTENSIONS.has(extension) ? "video" : "image",
+      folder: path.dirname(relativePath) === "." ? "" : path.dirname(relativePath).split(path.sep).join("/"),
+      groupFolder: getTopLevelFolder(relativePath),
+      url: `/media/${encodePath(relativePath)}`,
     });
   }
 
-  return images.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+  return media.sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
 }
 
-async function sendImageFile(pathname, response) {
-  const relativePath = decodeURIComponent(pathname.replace(/^\/image\//, ""));
+function getFolders(media) {
+  const counts = new Map();
+
+  for (const item of media) {
+    if (!item.groupFolder) {
+      continue;
+    }
+
+    counts.set(item.groupFolder, (counts.get(item.groupFolder) || 0) + 1);
+  }
+
+  return Array.from(counts, ([path, count]) => ({ path, count }))
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+}
+
+function getTopLevelFolder(relativePath) {
+  const firstSlashIndex = relativePath.indexOf("/");
+  return firstSlashIndex === -1 ? "" : relativePath.slice(0, firstSlashIndex);
+}
+
+async function sendMediaFile(pathname, response) {
+  const relativePath = decodeURIComponent(pathname.replace(/^\/(?:image|media)\//, ""));
   const filePath = resolveInside(imageRoot, relativePath);
   await sendFile(filePath, response);
 }
