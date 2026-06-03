@@ -159,15 +159,16 @@ button {
   position: relative;
   display: inline-block;
   --welcome-title-size: 300px;
+  transform: translateY(clamp(-130px, -16vh, -70px));
 }
 
 .welcome-frame {
   position: absolute;
-  top: calc(var(--welcome-title-size) * -0.2);
+  top: calc(var(--welcome-title-size) * -0.26);
   left: 50%;
   z-index: 0;
-  width: calc(var(--welcome-title-size) * 3);
-  height: calc(var(--welcome-title-size) * 1.16);
+  width: 890px;
+  height: 710px;
   overflow: visible;
   transform: translateX(-50%);
   pointer-events: none;
@@ -176,8 +177,8 @@ button {
 .welcome-frame-line {
   fill: none;
   stroke: url("#welcomeFrameGradient");
-  stroke-dasharray: 2384;
-  stroke-dashoffset: 2384;
+  stroke-dasharray: 2608;
+  stroke-dashoffset: 2608;
   stroke-linecap: square;
   stroke-linejoin: miter;
   stroke-width: 8;
@@ -194,7 +195,7 @@ button {
   font-size: var(--welcome-title-size);
   font-weight: 700;
   line-height: 0.65;
-  letter-spacing: -0.6rem;
+  letter-spacing: -0.66rem;
   white-space: nowrap;
   -webkit-background-clip: text;
 }
@@ -206,7 +207,7 @@ button {
 .welcome-actions {
   position: absolute;
   left: 50%;
-  top: calc(var(--welcome-title-size) * 0.92);
+  top: calc((var(--welcome-title-size) * -0.26) + 710px - 22px);
   z-index: 2;
   display: grid;
   justify-items: center;
@@ -733,6 +734,10 @@ svg {
   .welcome-frame {
     width: calc(var(--welcome-title-size) * 2.6);
     height: calc(var(--welcome-title-size) * 1.84);
+  }
+
+  .welcome-actions {
+    top: calc((var(--welcome-title-size) * -0.26) + (var(--welcome-title-size) * 1.84) - 20px);
   }
 
   .welcome-frame-line {
