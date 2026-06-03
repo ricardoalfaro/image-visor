@@ -277,29 +277,36 @@ button {
 
 .close-viewer-button {
   position: absolute;
-  top: clamp(-15px, -1.4vw, -8px);
-  right: clamp(-15px, -1.4vw, -8px);
-  z-index: 3;
-  width: clamp(44px, 7vw, 60px);
-  height: clamp(44px, 7vw, 60px);
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   padding: 0;
   border: none;
-  border-radius: 999px;
-  background: var(--photo-paper);
-  color: var(--photo-paper-text);
+  background: transparent;
+  color: #ffffff;
   cursor: pointer;
-  transition: opacity 140ms ease, background 140ms ease;
+  opacity: 0;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.photo-frame:hover .close-viewer-button,
+.close-viewer-button:focus-visible {
+  opacity: 1;
 }
 
 .close-viewer-button:hover {
-  background: var(--photo-paper);
+  transform: scale(1.08);
 }
 
 .close-viewer-button svg {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.4;
 }
 
 .placeholder-image,
@@ -526,7 +533,8 @@ button {
   transform: translateY(10px);
 }
 
-.image-viewport.has-visible-controls .controls {
+.image-viewport:hover .controls,
+.controls:focus-within {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);

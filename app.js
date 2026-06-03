@@ -93,7 +93,6 @@ imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointerup", endImageDrag);
 imageViewport.addEventListener("pointercancel", endImageDrag);
 imageViewport.addEventListener("lostpointercapture", endImageDrag);
-imageViewport.addEventListener("click", toggleImageControls);
 imageViewport.addEventListener("dblclick", handleImageDoubleClick);
 controls.addEventListener("click", (event) => event.stopPropagation());
 controls.addEventListener("pointerdown", (event) => event.stopPropagation());
@@ -405,7 +404,6 @@ async function renderActiveImage() {
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
   imageViewport.classList.toggle("has-video", Boolean(isVideo));
-  imageViewport.classList.remove("has-visible-controls");
   stage.classList.toggle("is-hidden", !hasImages);
   stage.classList.toggle("has-images", hasImages);
   document.body.classList.toggle("has-loaded-images", hasImages);
@@ -644,8 +642,6 @@ async function handleImageDoubleClick(event) {
     return;
   }
 
-  imageViewport.classList.remove("has-visible-controls");
-
   if (document.fullscreenElement) {
     resetFullscreenZoom();
     return;
@@ -817,23 +813,6 @@ function startImageDrag(event) {
   imageViewport.classList.add("is-dragging");
   imageViewport.setPointerCapture(event.pointerId);
   event.preventDefault();
-}
-
-function toggleImageControls(event) {
-  if (!images.length || isActiveVideo() || document.fullscreenElement) {
-    return;
-  }
-
-  if (event.detail > 1) {
-    return;
-  }
-
-  if (dragState || fullscreenSelection || fullscreenPan) {
-    return;
-  }
-
-  event.stopPropagation();
-  imageViewport.classList.toggle("has-visible-controls");
 }
 
 function dragImage(event) {
