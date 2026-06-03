@@ -37,6 +37,7 @@
             <img id="placeholderImage" class="placeholder-image" src="assets/placeholder.jpeg" alt="">
             <div id="imageViewport" class="image-viewport is-hidden">
               <img id="activeImage" alt="">
+              <video id="activeVideo" class="is-hidden" controls playsinline></video>
               <div class="image-overlay" aria-hidden="true">
                 <span id="activePosition" class="overlay-text overlay-right"></span>
               </div>
@@ -69,6 +70,8 @@
             </div>
           </figure>
 
+          <nav id="folderNav" class="folder-nav is-hidden" aria-label="Subcarpetas"></nav>
+
           <button id="nextButton" class="nav-button next is-hidden" type="button" aria-label="Imagen siguiente" disabled hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
           </button>
@@ -80,7 +83,7 @@
           <button id="serverButton" class="button primary" type="button">Elegir una carpeta de imágenes</button>
           <label id="browserFolderLink" class="text-link">
             Abrir sin servidor
-            <input id="folderInput" type="file" accept="image/*" webkitdirectory multiple>
+            <input id="folderInput" type="file" accept="image/*,video/mp4,video/quicktime,video/mpeg,.m4v,.mov,.mp4,.mpeg,.mpg,.avif" webkitdirectory multiple>
           </label>
           <span id="browserFolderWarning" class="inline-warning is-hidden">Evita carpetas demasiado grandes en este modo.</span>
         </div>

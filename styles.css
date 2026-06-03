@@ -272,16 +272,28 @@ button {
   cursor: crosshair;
 }
 
-.image-viewport img {
+.image-viewport img,
+.image-viewport video {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: contain;
   border-radius: 0;
+}
+
+.image-viewport img {
   transform: translate(var(--pan-x, 0px), var(--pan-y, 0px)) scale(var(--zoom, 1));
   transform-origin: center center;
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.image-viewport video {
+  background: #000000;
+}
+
+.image-viewport.has-video {
+  touch-action: auto;
 }
 
 .image-overlay {
@@ -361,6 +373,43 @@ button {
 
 .next {
   right: 0;
+}
+
+.folder-nav {
+  position: absolute;
+  top: 50%;
+  left: clamp(8px, 2vw, 18px);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(58vh, 420px);
+  padding: 6px;
+  overflow: auto;
+  transform: translateY(-50%);
+}
+
+.folder-button {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--photo-paper);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--photo-paper-text), 0 6px 18px rgba(0, 0, 0, 0.18);
+  transition: transform 140ms ease, opacity 140ms ease, box-shadow 140ms ease;
+}
+
+.folder-button:hover {
+  transform: scale(1.18);
+}
+
+.folder-button.is-active {
+  box-shadow: 0 0 0 3px var(--photo-paper-text), 0 6px 18px rgba(0, 0, 0, 0.2);
 }
 
 .bottom-bar {
@@ -600,6 +649,11 @@ svg {
     width: 100%;
   }
 
+  .folder-nav {
+    left: 6px;
+    max-height: min(48vh, 320px);
+  }
+
   .photo-frame {
     padding: clamp(10px, 3vw, 16px);
   }
@@ -712,7 +766,8 @@ svg {
 :fullscreen .bottom-bar,
 :fullscreen .welcome-copy,
 :fullscreen .nav-button,
-:fullscreen .close-viewer-button {
+:fullscreen .close-viewer-button,
+:fullscreen .folder-nav {
   display: none;
 }
 
@@ -743,7 +798,8 @@ svg {
   display: none;
 }
 
-:fullscreen .image-viewport img {
+:fullscreen .image-viewport img,
+:fullscreen .image-viewport video {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
