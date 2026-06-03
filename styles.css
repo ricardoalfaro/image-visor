@@ -891,7 +891,6 @@ svg {
 
 :fullscreen .viewer-layout,
 :fullscreen .stage,
-:fullscreen .photo-frame,
 :fullscreen .image-viewport {
   width: 100vw;
   height: 100vh;
@@ -901,6 +900,19 @@ svg {
   aspect-ratio: auto;
   padding: 0;
   border: 0;
+  box-shadow: none;
+}
+
+:fullscreen .photo-frame {
+  width: 100vw;
+  height: 101vh;
+  height: 101dvh;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 
