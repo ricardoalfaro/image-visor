@@ -160,7 +160,7 @@ async function loadLocalFolder() {
   serverButton.disabled = true;
 
   try {
-    if (await loadFolderFromLocalServer()) {
+    if (isLocalServerHost() && await loadFolderFromLocalServer()) {
       return;
     }
 
@@ -169,10 +169,20 @@ async function loadLocalFolder() {
       return;
     }
 
-    showNotice("No se pudo abrir el selector local. Reinicia el server y vuelve a intentar.", "warning");
+    if (isLocalServerHost()) {
+      showNotice("No se pudo abrir el selector local. Reinicia el server y vuelve a intentar.", "warning");
+      return;
+    }
+
+    showNotice(BROWSER_PICKER_WARNING, "warning");
+    folderInput.click();
   } finally {
     serverButton.disabled = false;
   }
+}
+
+function isLocalServerHost() {
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 }
 
 async function loadFolderFromLocalServer() {
