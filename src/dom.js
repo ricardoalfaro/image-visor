@@ -31,3 +31,5 @@ export const sidebarScrim = document.querySelector("#sidebarScrim");
 export const recentFoldersList = document.querySelector("#recentFoldersList");
 export const emptyRecentFolders = document.querySelector("#emptyRecentFolders");
 export const clearRecentFoldersButton = document.querySelector("#clearRecentFoldersButton");
+export const sortSelect = document.querySelector("#sortSelect");
+export const sidebarImportButton = document.querySelector("#sidebarImportButton");
