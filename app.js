@@ -4,7 +4,8 @@ import {
   playButton, stopButton, shuffleButton, zoomOutButton, zoomInButton,
   resetZoomButton, themeToggleButton, closeViewerButton, menuButton,
   closeSidebarButton, sidebarScrim, clearRecentFoldersButton, imageViewport,
-  controls, activeImage, activeVideo, photoFrame, folderNav
+  controls, activeImage, activeVideo, photoFrame, folderNav, sortSelect,
+  sidebarImportButton
 } from "./src/dom.js";
 import {
   handleBrowserFolderIntent, handleFolderSelection, loadLocalFolder, closeViewer
@@ -12,7 +13,7 @@ import {
 import {
   showPrevious, showNext, toggleFullscreen, startSlideshow, stopSlideshowAndRender,
   toggleShuffle, handleImageDoubleClick, updateFullscreenButton, updateFrameOrientation,
-  handleVideoEnded, isActiveVideo
+  handleVideoEnded, isActiveVideo, applyFolderFilter
 } from "./src/viewer.js";
 import {
   setZoom, startImageDrag, dragImage, endImageDrag, resetFullscreenZoom
@@ -131,6 +132,10 @@ function canOpenFolderFromKeyboard(event) {
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
 serverButton.addEventListener("click", loadLocalFolder);
+sidebarImportButton.addEventListener("click", () => {
+  closeSidebar();
+  loadLocalFolder();
+});
 previousButton.addEventListener("click", showPrevious);
 nextButton.addEventListener("click", showNext);
 fullscreenButton.addEventListener("click", toggleFullscreen);
@@ -157,6 +162,10 @@ controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
 activeVideo.addEventListener("loadedmetadata", updateFrameOrientation);
 activeVideo.addEventListener("ended", handleVideoEnded);
+sortSelect.addEventListener("change", (event) => {
+  state.sortBy = event.target.value;
+  applyFolderFilter({ keepIndex: true });
+});
 
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("click", handleViewerOutsideClick);

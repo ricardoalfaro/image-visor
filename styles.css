@@ -768,6 +768,58 @@ button {
   -webkit-background-clip: text;
 }
 
+.sort-section {
+  padding: 22px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sort-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sort-control label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select-wrapper select {
+  width: 100%;
+  appearance: none;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 32px 8px 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.select-wrapper select:focus,
+.select-wrapper select:hover {
+  border-color: var(--text);
+  outline: none;
+}
+
+.select-wrapper i {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
 .recent-section {
   min-height: 0;
   padding-top: 22px;
@@ -914,10 +966,16 @@ button {
 }
 
 .empty-recent {
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
 .theme-icon {

@@ -160,12 +160,14 @@ async function collectMediaFiles(rootPath, currentPath = rootPath) {
       continue;
     }
 
+    const stat = await fsp.stat(entryPath);
     const relativePath = path.relative(rootPath, entryPath).split(path.sep).join("/");
     files.push({
       name: entry.name,
       path: relativePath,
       type: getMediaType(entryPath),
       url: `/media?path=${encodeURIComponent(entryPath)}`,
+      lastModified: stat.mtimeMs,
     });
   }
 
@@ -235,7 +237,10 @@ async function sendFile(filePath, response) {
 }
 
 function sendJson(response, statusCode, payload) {
-  response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+  response.writeHead(statusCode, { 
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate"
+  });
   response.end(JSON.stringify(payload));
 }
 

@@ -266,7 +266,7 @@ export async function refreshRecentFolder(folderId) {
 }
 
 async function loadServerFolderByPath(folderPath) {
-  const response = await fetch(`/api/folder?path=${encodeURIComponent(folderPath)}`);
+  const response = await fetch(`/api/folder?path=${encodeURIComponent(folderPath)}`, { cache: "no-store" });
 
   if (!response.ok) {
     throw new Error("Could not load folder");
@@ -281,6 +281,7 @@ async function loadServerFolder(folder) {
     path: item.path,
     type: item.type,
     url: item.url,
+    lastModified: item.lastModified || 0,
     folder: getFolderPath(item.path),
     groupFolder: getTopLevelFolder(item.path),
   }));
@@ -326,13 +327,13 @@ async function collectDirectoryFiles(directoryHandle, parentPath = "") {
 async function loadLocalFiles(files, label) {
   const media = files
     .filter((item) => isSupportedMedia(item.file))
-    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }))
     .map((item) => {
       return {
         file: item.file,
         name: item.file.name,
         path: item.path,
         type: getMediaType(item.file),
+        lastModified: item.file.lastModified || 0,
         folder: getFolderPath(item.path),
         groupFolder: getTopLevelFolder(item.path),
       };

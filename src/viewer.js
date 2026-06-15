@@ -25,12 +25,28 @@ export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
   state.images = state.activeFolderPath ? state.allMedia.filter((item) => isInsideFolder(item, state.activeFolderPath)) : [...state.allMedia];
 
+  sortMedia();
+
   if (previousItem) {
     const nextIndex = state.images.findIndex((item) => item.path === previousItem.path);
     state.activeIndex = nextIndex >= 0 ? nextIndex : Math.min(state.activeIndex, state.images.length - 1);
   }
 
   renderFolderNav();
+}
+
+export function sortMedia() {
+  state.images.sort((a, b) => {
+    if (state.sortBy === "dateDesc") {
+      const diff = b.lastModified - a.lastModified;
+      return diff !== 0 ? diff : a.path.localeCompare(b.path, undefined, { numeric: true });
+    }
+    if (state.sortBy === "dateAsc") {
+      const diff = a.lastModified - b.lastModified;
+      return diff !== 0 ? diff : a.path.localeCompare(b.path, undefined, { numeric: true });
+    }
+    return a.path.localeCompare(b.path, undefined, { numeric: true });
+  });
 }
 
 function isInsideFolder(item, folderPath) {

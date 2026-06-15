@@ -44,7 +44,7 @@
               </svg>
               <h1><span>Image</span><span>Viewer Pro</span></h1>
               <div class="welcome-actions">
-                <button id="serverButton" class="button primary welcome-button" type="button">Elegir carpeta</button>
+                <button id="serverButton" class="button primary welcome-button" type="button">Importar una carpeta</button>
               </div>
             </div>
           </div>
@@ -113,6 +113,19 @@
             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
+        <section class="sort-section" aria-label="Ordenamiento">
+          <div class="sort-control">
+            <label for="sortSelect">Ordenar por</label>
+            <div class="select-wrapper">
+              <select id="sortSelect">
+                <option value="name">Nombre</option>
+                <option value="dateDesc">Más recientes primero</option>
+                <option value="dateAsc">Más antiguas primero</option>
+              </select>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </div>
+          </div>
+        </section>
         <section class="recent-section" aria-labelledby="recentFoldersTitle">
           <div class="recent-section-header">
             <h3 id="recentFoldersTitle">Recientes</h3>
@@ -123,6 +136,9 @@
           <ol id="recentFoldersList" class="recent-list"></ol>
           <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas recientes.</p>
         </section>
+        <div class="sidebar-footer">
+          <button id="sidebarImportButton" class="button primary welcome-button" style="width: 100%;">Importar una carpeta</button>
+        </div>
       </aside>
     </main>
 

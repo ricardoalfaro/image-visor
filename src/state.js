@@ -3,6 +3,7 @@ export const state = {
   allMedia: [],
   folders: [],
   activeFolderPath: "",
+  sortBy: "name",
   activeIndex: -1,
   zoom: 100,
   sourceLabel: "Carpeta local",
