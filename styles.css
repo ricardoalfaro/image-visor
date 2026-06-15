@@ -821,7 +821,7 @@ button {
 
 .recent-folder-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
   align-items: center;
   border-radius: 6px;
 }
@@ -879,6 +879,7 @@ button {
   font-size: 12px;
 }
 
+.refresh-recent-button,
 .remove-recent-button {
   width: 28px;
   height: 28px;
@@ -894,15 +895,19 @@ button {
   transition: opacity 120ms ease, color 120ms ease;
 }
 
+.recent-folder-item:hover .refresh-recent-button,
 .recent-folder-item:hover .remove-recent-button,
+.refresh-recent-button:focus-visible,
 .remove-recent-button:focus-visible {
   opacity: 1;
 }
 
+.refresh-recent-button:hover,
 .remove-recent-button:hover {
   color: var(--text);
 }
 
+.refresh-recent-button i,
 .remove-recent-button i {
   font-size: 12px;
   line-height: 1;
