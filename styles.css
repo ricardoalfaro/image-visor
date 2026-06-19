@@ -825,6 +825,41 @@ button {
   padding-top: 22px;
 }
 
+.recent-folders-section {
+  flex: 1 1 auto;
+}
+
+.favorite-folder-section {
+  margin-top: 14px;
+}
+
+.favorite-folder-button {
+  width: 100%;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.favorite-folder-button:hover:not(:disabled) {
+  background: var(--control-hover);
+}
+
+.favorite-folder-button > .fa-folder {
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .recent-section h3 {
   font-size: 14px;
   text-transform: uppercase;
@@ -836,6 +871,22 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.sidebar-count {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.favorite-folder-button:disabled {
+  cursor: default;
+  opacity: 0.52;
 }
 
 .clear-recent-button {
@@ -872,9 +923,8 @@ button {
 }
 
 .recent-folder-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px 28px;
-  align-items: center;
+  position: relative;
+  display: block;
   border-radius: 6px;
 }
 
@@ -886,8 +936,8 @@ button {
   width: 100%;
   min-height: 34px;
   display: grid;
-  grid-template-columns: 18px 1fr;
-  grid-template-areas: "icon name";
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-areas: "icon name count";
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
@@ -911,7 +961,7 @@ button {
 }
 
 .recent-folder-name,
-.recent-folder-meta {
+.recent-folder-count {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -924,15 +974,19 @@ button {
   font-weight: 500;
 }
 
-.recent-folder-meta {
-  grid-area: meta;
-  display: none;
+.recent-folder-count {
+  grid-area: count;
+  min-width: 24px;
   color: var(--muted);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .refresh-recent-button,
 .remove-recent-button {
+  position: absolute;
+  top: 50%;
   width: 28px;
   height: 28px;
   display: grid;
@@ -940,11 +994,20 @@ button {
   padding: 0;
   border: 0;
   border-radius: 6px;
-  background: transparent;
+  background: var(--control-hover);
   color: var(--muted);
   cursor: pointer;
   opacity: 0;
+  transform: translateY(-50%);
   transition: opacity 120ms ease, color 120ms ease;
+}
+
+.refresh-recent-button {
+  right: 28px;
+}
+
+.remove-recent-button {
+  right: 0;
 }
 
 .recent-folder-item:hover .refresh-recent-button,
@@ -1058,6 +1121,32 @@ input[type="file"] {
   background: var(--overlay-control-active);
   color: var(--overlay-control-active-text);
   text-shadow: none;
+}
+
+.controls .favorite-button[aria-pressed="true"] {
+  background: transparent;
+  color: #f5b301;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.controls .favorite-button,
+.controls .favorite-button:hover:not(:disabled),
+.controls .favorite-button[aria-pressed="true"]:hover:not(:disabled) {
+  border: 0;
+  background: transparent;
+}
+
+.controls .favorite-button i {
+  font-weight: 400;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.controls .favorite-button[aria-pressed="true"] i {
+  font-weight: 900;
+}
+
+.controls .favorite-button:hover:not(:disabled) i {
+  transform: scale(1.1);
 }
 
 .controls .icon-button i {
@@ -1310,7 +1399,35 @@ svg {
 }
 
 :fullscreen .controls {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  display: flex;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+:fullscreen .controls .control-group-primary > :not(.favorite-button),
+:fullscreen .controls .control-group-tools {
   display: none;
+}
+
+:fullscreen .image-viewport:hover .controls {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+}
+
+:fullscreen .image-viewport.show-favorite-control .controls,
+:fullscreen .image-viewport .controls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 :fullscreen .image-viewport img,

@@ -69,6 +69,9 @@
               <div id="zoomSelection" class="zoom-selection is-hidden" aria-hidden="true"></div>
               <div class="controls" aria-label="Controles del visualizador">
                 <div class="control-group control-group-primary">
+                  <button id="favoriteButton" class="icon-button favorite-button" type="button" disabled aria-label="Agregar a favoritos" aria-pressed="false">
+                    <i class="fa-regular fa-star" aria-hidden="true"></i>
+                  </button>
                   <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
                     <i class="fa-solid fa-play" aria-hidden="true"></i>
                   </button>
@@ -126,15 +129,22 @@
             </div>
           </div>
         </section>
-        <section class="recent-section" aria-labelledby="recentFoldersTitle">
+        <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
+          <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
+            <i class="fa-solid fa-folder" aria-hidden="true"></i>
+            <span id="favoritePhotosTitle">Favoritos</span>
+            <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
+          </button>
+        </section>
+        <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
           <div class="recent-section-header">
-            <h3 id="recentFoldersTitle">Recientes</h3>
-            <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar recientes" title="Limpiar recientes">
+            <h3 id="recentFoldersTitle">Carpetas</h3>
+            <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
               <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
             </button>
           </div>
           <ol id="recentFoldersList" class="recent-list"></ol>
-          <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas recientes.</p>
+          <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
         </section>
         <div class="sidebar-footer">
           <button id="sidebarImportButton" class="button primary welcome-button" style="width: 100%;">Importar una carpeta</button>

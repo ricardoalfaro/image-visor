@@ -10,10 +10,14 @@ import {
   themeToggleButton,
   recentFoldersList,
   emptyRecentFolders,
-  clearRecentFoldersButton
+  clearRecentFoldersButton,
+  favoritePhotosCount,
+  favoriteFolderButton
 } from "./dom.js";
 import { openRecentFolder, refreshRecentFolder } from "./file-loader.js";
 import { removeRecentFolder } from "./storage.js";
+import { FAVORITES_FOLDER_PATH } from "./constants.js";
+import { getAvailableFavorites, selectFolder } from "./viewer.js";
 
 export function showNotice(message, type = "info") {
   const noticeType = ["info", "warning", "error"].includes(type) ? type : "info";
@@ -99,18 +103,20 @@ export function renderRecentFolders() {
     const refreshIcon = document.createElement("i");
     const removeIcon = document.createElement("i");
     const label = document.createElement("span");
-    const meta = document.createElement("span");
+    const count = document.createElement("span");
 
     item.className = "recent-folder-item";
     button.className = "recent-folder-button";
     button.type = "button";
-    button.title = folder.name;
+    button.title = `${folder.name}, ${getFolderPhotoCountLabel(folder)}`;
+    button.setAttribute("aria-label", button.title);
     icon.className = "fa-solid fa-folder";
     icon.setAttribute("aria-hidden", "true");
     label.className = "recent-folder-name";
     label.textContent = folder.name;
-    meta.className = "recent-folder-meta";
-    meta.textContent = getRecentFolderMeta(folder);
+    count.className = "recent-folder-count";
+    count.textContent = Number.isInteger(folder.mediaCount) ? String(folder.mediaCount) : "–";
+    count.setAttribute("aria-label", getFolderPhotoCountLabel(folder));
     refreshButton.className = "refresh-recent-button";
     refreshButton.type = "button";
     refreshButton.title = `Actualizar ${folder.name}`;
@@ -124,7 +130,7 @@ export function renderRecentFolders() {
     removeIcon.className = "fa-solid fa-xmark";
     removeIcon.setAttribute("aria-hidden", "true");
 
-    button.append(icon, label, meta);
+    button.append(icon, label, count);
     button.addEventListener("click", () => openRecentFolder(folder.id));
     refreshButton.append(refreshIcon);
     refreshButton.addEventListener("click", () => refreshRecentFolder(folder.id));
@@ -134,6 +140,27 @@ export function renderRecentFolders() {
     recentFoldersList.append(item);
   });
 }
+
+function getFolderPhotoCountLabel(folder) {
+  if (!Number.isInteger(folder.mediaCount)) {
+    return "cantidad pendiente";
+  }
+
+  return `${folder.mediaCount} ${folder.mediaCount === 1 ? "foto" : "fotos"}`;
+}
+
+export function renderFavorites() {
+  const favorites = getAvailableFavorites();
+  favoritePhotosCount.textContent = String(favorites.length);
+  favoritePhotosCount.setAttribute("aria-label", `${favorites.length} favoritos`);
+  favoriteFolderButton.disabled = favorites.length === 0;
+  favoriteFolderButton.setAttribute("aria-label", `Abrir Favoritos, ${favorites.length} fotos`);
+}
+
+favoriteFolderButton.addEventListener("click", async () => {
+  closeSidebar();
+  await selectFolder(FAVORITES_FOLDER_PATH);
+});
 
 export function getRecentFolderMeta(folder) {
   if (state.recentFolderFiles.has(folder.id)) {
