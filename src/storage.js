@@ -7,6 +7,7 @@ import {
 } from "./constants.js";
 import { state } from "./state.js";
 import { renderRecentFolders } from "./ui.js";
+import { getMediaType, isSupportedMedia } from "./utils.js";
 
 function isValidRecentFolder(folder) {
   return Boolean(folder && typeof folder.id === "string" && typeof folder.name === "string");
@@ -20,12 +21,13 @@ export function saveRecentFolders() {
   localStorage.setItem(RECENT_FOLDERS_KEY, JSON.stringify(state.recentFolders));
 }
 
-export function loadRecentFolders() {
+export async function loadRecentFolders() {
   try {
     const storedFolders = JSON.parse(localStorage.getItem(RECENT_FOLDERS_KEY) || "[]");
     state.recentFolders = Array.isArray(storedFolders)
       ? storedFolders.filter(isValidRecentFolder).filter(isPersistentRecentFolder).slice(0, RECENT_FOLDERS_LIMIT)
       : [];
+    await hydrateStoredFolderCounts();
     saveRecentFolders();
   } catch (error) {
     state.recentFolders = [];
@@ -43,6 +45,7 @@ export async function rememberRecentFolder(folder) {
     canReopen: Boolean(folder.canReopen),
     path: folder.path || "",
     source: folder.source || "browser",
+    mediaCount: state.allMedia.filter((item) => item.type === "image").length,
     visitedAt: Date.now(),
   };
   state.recentFolders = [
@@ -55,6 +58,23 @@ export async function rememberRecentFolder(folder) {
 
   if (folder.handle) {
     await storeDirectoryHandle(nextFolder.id, folder.handle);
+  }
+}
+
+async function hydrateStoredFolderCounts() {
+  for (const folder of state.recentFolders) {
+    if (Number.isInteger(folder.mediaCount) || folder.source !== "browser" || !folder.canReopen) {
+      continue;
+    }
+
+    const storedFolder = await getStoredBrowserFolderFiles(folder.id);
+    if (!storedFolder?.files) {
+      continue;
+    }
+
+    folder.mediaCount = storedFolder.files.filter((item) => (
+      isSupportedMedia(item.file) && getMediaType(item.file) === "image"
+    )).length;
   }
 }
 

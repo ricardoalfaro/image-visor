@@ -1,4 +1,4 @@
-import { SLIDESHOW_INTERVAL_MS } from "./constants.js";
+import { FAVORITES_FOLDER_PATH, SLIDESHOW_INTERVAL_MS } from "./constants.js";
 import { state, clearActiveObjectUrl, clearFolderThumbnailObjectUrls } from "./state.js";
 import {
   folderNav,
@@ -13,6 +13,7 @@ import {
   playButton,
   stopButton,
   shuffleButton,
+  favoriteButton,
   previousButton,
   nextButton,
   activeImage,
@@ -20,10 +21,17 @@ import {
   activePosition,
 } from "./dom.js";
 import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-pan.js";
+import { getFavoriteKey, isFavorite } from "./favorites.js";
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
-  state.images = state.activeFolderPath ? state.allMedia.filter((item) => isInsideFolder(item, state.activeFolderPath)) : [...state.allMedia];
+  if (state.activeFolderPath === FAVORITES_FOLDER_PATH) {
+    state.images = getAvailableFavorites();
+  } else {
+    state.images = state.activeFolderPath
+      ? state.allMedia.filter((item) => isInsideFolder(item, state.activeFolderPath))
+      : [...state.allMedia];
+  }
 
   sortMedia();
 
@@ -64,7 +72,8 @@ export async function selectFolder(path) {
 }
 
 function renderFolderNav() {
-  const hasFolders = state.folders.length > 0;
+  const favoriteCount = getAvailableFavorites().length;
+  const hasFolders = state.folders.length > 0 || favoriteCount > 0;
   clearFolderThumbnailObjectUrls();
   folderNav.classList.toggle("is-hidden", !hasFolders);
   folderNav.innerHTML = "";
@@ -73,13 +82,24 @@ function renderFolderNav() {
     return;
   }
 
-  const allButton = createFolderButton({
-    title: "Ver todo el contenido",
-    isActive: state.activeFolderPath === "",
-    path: "",
-    thumbnailUrl: getFolderPreviewUrl(""),
-  });
-  folderNav.append(allButton);
+  if (state.allMedia.length > 0) {
+    const allButton = createFolderButton({
+      title: "Ver todo el contenido",
+      isActive: state.activeFolderPath === "",
+      path: "",
+      thumbnailUrl: getFolderPreviewUrl(""),
+    });
+    folderNav.append(allButton);
+  }
+
+  if (favoriteCount > 0) {
+    folderNav.append(createFolderButton({
+      title: `Favoritos (${favoriteCount})`,
+      isActive: state.activeFolderPath === FAVORITES_FOLDER_PATH,
+      path: FAVORITES_FOLDER_PATH,
+      thumbnailUrl: getFolderPreviewUrl(FAVORITES_FOLDER_PATH),
+    }));
+  }
 
   state.folders.forEach((folder) => {
     folderNav.append(createFolderButton({
@@ -107,13 +127,15 @@ function createFolderButton({ title, isActive, path, thumbnailUrl }) {
 }
 
 function getFolderPreviewUrl(folderPath) {
-  const preview = state.allMedia.find((item) => {
-    if (item.type !== "image") {
-      return false;
-    }
+  const preview = folderPath === FAVORITES_FOLDER_PATH
+    ? getAvailableFavorites()[0]
+    : state.allMedia.find((item) => {
+      if (item.type !== "image") {
+        return false;
+      }
 
-    return folderPath ? item.groupFolder === folderPath : true;
-  });
+      return folderPath ? item.groupFolder === folderPath : true;
+    });
 
   if (!preview) {
     return "";
@@ -126,6 +148,22 @@ function getFolderPreviewUrl(folderPath) {
   const objectUrl = URL.createObjectURL(preview.file);
   state.folderThumbnailObjectUrls.push(objectUrl);
   return objectUrl;
+}
+
+export function getAvailableFavorites() {
+  const favoritesByKey = new Map();
+
+  for (const item of state.favoriteMedia) {
+    favoritesByKey.set(item.favoriteKey, item);
+  }
+
+  for (const item of state.allMedia) {
+    if (item.type === "image" && isFavorite(item)) {
+      favoritesByKey.set(getFavoriteKey(item), item);
+    }
+  }
+
+  return [...favoritesByKey.values()];
 }
 
 export async function renderActiveImage() {
@@ -153,10 +191,12 @@ export async function renderActiveImage() {
   playButton.disabled = !hasImages || state.isPlaying;
   stopButton.disabled = !hasImages || !state.isPlaying;
   shuffleButton.disabled = !hasImages || state.images.length < 2;
+  favoriteButton.disabled = !hasImages || isVideo;
   playButton.setAttribute("aria-pressed", String(state.isPlaying));
   playButton.classList.toggle("is-active", state.isPlaying);
   shuffleButton.setAttribute("aria-pressed", String(state.shuffleEnabled));
   shuffleButton.classList.toggle("is-active", state.shuffleEnabled);
+  updateFavoriteButton(activeMedia);
   previousButton.disabled = state.activeIndex <= 0;
   nextButton.disabled = !canMoveNext();
 
@@ -197,6 +237,16 @@ export async function renderActiveImage() {
   updateFrameOrientation();
 
   nextButton.disabled = !canMoveNext();
+}
+
+export function updateFavoriteButton(media = state.images[state.activeIndex]) {
+  const activeIsFavorite = Boolean(media && media.type !== "video" && isFavorite(media));
+  const favoriteIcon = favoriteButton.querySelector("i");
+  favoriteButton.setAttribute("aria-pressed", String(activeIsFavorite));
+  favoriteButton.setAttribute("aria-label", activeIsFavorite ? "Quitar de favoritos" : "Agregar a favoritos");
+  favoriteButton.title = activeIsFavorite ? "Quitar de favoritos" : "Agregar a favoritos";
+  favoriteIcon.classList.toggle("fa-solid", activeIsFavorite);
+  favoriteIcon.classList.toggle("fa-regular", !activeIsFavorite);
 }
 
 function getImageUrl(image) {

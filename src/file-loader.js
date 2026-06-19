@@ -4,7 +4,7 @@ import {
   folderInput,
   serverButton,
 } from "./dom.js";
-import { showNotice, hideNotice, closeSidebar } from "./ui.js";
+import { showNotice, hideNotice, closeSidebar, renderFavorites } from "./ui.js";
 import { getLocalRelativePath, getBrowserSelectedFolderName, getFolderPath, getTopLevelFolder, isSupportedMedia, getMediaType, createRecentFolderToken } from "./utils.js";
 import { 
   storeBrowserFolderFiles,
@@ -16,6 +16,7 @@ import {
 } from "./storage.js";
 import { renderActiveImage, stopSlideshow } from "./viewer.js";
 import { setZoom, resetFullscreenZoom } from "./zoom-pan.js";
+import { syncAvailableFavorites } from "./favorites.js";
 
 export async function handleBrowserFolderIntent() {
   showNotice(BROWSER_PICKER_WARNING, "warning");
@@ -352,9 +353,11 @@ async function loadMediaItems(media, label) {
   stopSlideshow();
 
   state.allMedia = media;
+  await syncAvailableFavorites(state.allMedia);
   state.folders = getFoldersFromMedia(state.allMedia);
   state.activeFolderPath = "";
   applyFolderFilter();
+  renderFavorites();
 
   state.activeIndex = state.images.length > 0 ? 0 : -1;
   setZoom(100);
@@ -372,6 +375,7 @@ export async function closeViewer() {
   state.allMedia = [];
   state.folders = [];
   state.activeFolderPath = "";
+  renderFavorites();
   state.activeIndex = -1;
   folderInput.value = "";
   setZoom(100);
