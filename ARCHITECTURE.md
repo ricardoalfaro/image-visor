@@ -138,6 +138,8 @@ No debe renderizar UI.
 - Los PR se revisan y mezclan a `develop`.
 - `develop` se mezcla a `main` solo cuando el corte evolutivo este completo y verificado.
 - No trabajar directamente sobre `main` para features evolutivas.
+- Antes de cada push remoto o cierre de sesion, actualizar `BACKLOG.md` con el estado real del trabajo.
+- La actualizacion de `BACKLOG.md` debe quedar comiteada y pusheada con los cambios de la sesion.
 
 ## Flujo Objetivo
 

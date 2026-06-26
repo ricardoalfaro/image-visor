@@ -36,6 +36,8 @@ La funcionalidad existente debe mantenerse en todo momento:
 - Los PR se mezclan primero a `develop`.
 - `develop` se mezcla a `main` solo cuando haya un cambio evolutivo completo, verificado y listo para produccion.
 - Evitar commits directos en `main` salvo hotfixes explicitos.
+- Antes de cada push remoto o cierre de sesion, actualizar este backlog con el estado real del trabajo.
+- La actualizacion del backlog debe quedar comiteada y pusheada junto con el resto de cambios.
 
 ## Prioridades
 
