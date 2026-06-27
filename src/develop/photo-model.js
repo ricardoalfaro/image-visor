@@ -82,7 +82,7 @@ export function createPhotoModelFromMediaItem(mediaItem) {
   const lastModified = mediaItem.lastModified || mediaItem.file?.lastModified || 0;
 
   return createPhotoModel({
-    id: mediaItem.id || createPhotoId({ path, name, lastModified }),
+    id: getPhotoIdFromMediaItem(mediaItem),
     source: {
       type: sourceType,
       file: mediaItem.file || null,
@@ -107,6 +107,18 @@ export function createPhotoModelsFromMediaItems(mediaItems) {
   return Array.isArray(mediaItems)
     ? mediaItems.filter((item) => item?.type === "image").map(createPhotoModelFromMediaItem)
     : [];
+}
+
+export function getPhotoIdFromMediaItem(mediaItem) {
+  if (!mediaItem) {
+    return "";
+  }
+
+  const name = mediaItem.name || mediaItem.file?.name || "";
+  const path = mediaItem.path || name;
+  const lastModified = mediaItem.lastModified || mediaItem.file?.lastModified || 0;
+
+  return mediaItem.id || mediaItem.favoriteKey || createPhotoId({ path, name, lastModified });
 }
 
 function createPhotoId({ path, name, lastModified }) {

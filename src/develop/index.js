@@ -20,6 +20,7 @@ export {
   createPhotoModel,
   createPhotoModelFromMediaItem,
   createPhotoModelsFromMediaItems,
+  getPhotoIdFromMediaItem,
 } from "./photo-model.js";
 
 export {

@@ -22,6 +22,8 @@ import {
 } from "./dom.js";
 import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-pan.js";
 import { getFavoriteKey, isFavorite } from "./favorites.js";
+import { getPhotoIdFromMediaItem } from "./develop/index.js";
+import { RENDER_RESULT_TYPES, renderMedia } from "./rendering/index.js";
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
@@ -212,11 +214,11 @@ export async function renderActiveImage() {
   }
 
   const image = activeMedia;
-  const mediaUrl = getImageUrl(image);
   activeImage.classList.toggle("is-hidden", isVideo);
   activeVideo.classList.toggle("is-hidden", !isVideo);
 
   if (isVideo) {
+    const mediaUrl = getImageUrl(image);
     activeImage.removeAttribute("src");
     activeImage.alt = "";
     activeVideo.autoplay = true;
@@ -228,6 +230,7 @@ export async function renderActiveImage() {
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
+    const mediaUrl = await getRenderedImageUrl(image);
     activeImage.src = mediaUrl;
     activeImage.alt = image.name;
   }
@@ -258,6 +261,29 @@ function getImageUrl(image) {
 
   state.currentObjectUrl = URL.createObjectURL(image.file);
   return state.currentObjectUrl;
+}
+
+async function getRenderedImageUrl(image) {
+  const photo = getPhotoForMediaItem(image);
+  const renderResult = await renderMedia({ photo, media: image });
+
+  if (renderResult.type === RENDER_RESULT_TYPES.SOURCE_URL || renderResult.type === RENDER_RESULT_TYPES.OBJECT_URL) {
+    clearActiveObjectUrl();
+    return renderResult.value;
+  }
+
+  if (renderResult.type === RENDER_RESULT_TYPES.SOURCE_FILE && renderResult.value) {
+    clearActiveObjectUrl();
+    state.currentObjectUrl = URL.createObjectURL(renderResult.value);
+    return state.currentObjectUrl;
+  }
+
+  return getImageUrl(image);
+}
+
+function getPhotoForMediaItem(mediaItem) {
+  const photoId = getPhotoIdFromMediaItem(mediaItem);
+  return state.photos.find((photo) => photo.id === photoId) || null;
 }
 
 function getPositionText() {

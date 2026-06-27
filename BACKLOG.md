@@ -59,6 +59,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Creada capa de acciones de aplicacion para editar fotos, persistir historial y solicitar render sin tocar UI.
 - [x] Convertido `ExportEngine` en contrato ejecutable con resultados normalizados y export passthrough.
 - [x] Desacoplada persistencia de carpetas recientes del render de UI.
+- [x] Integrado el visor con `RenderingEngine` para imagenes sin cambios visuales.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -140,7 +141,7 @@ Desacoplar renderizado de la interfaz.
 - [x] Definir entrada: foto original + operaciones/ajustes.
 - [x] Definir salida: bitmap/canvas/object URL/render target segun necesidad.
 - [x] Crear acciones de aplicacion que modifican estado y solicitan render.
-- [ ] Hacer que la UI modifique estado y solicite render.
+- [x] Hacer que la UI modifique estado y solicite render.
 - [ ] Evitar que controles visuales modifiquen directamente `img.src` para ediciones.
 - [x] Mantener compatibilidad con video, que no pasa por el revelador fotografico inicial.
 
