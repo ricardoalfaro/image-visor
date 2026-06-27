@@ -51,6 +51,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Implementado motor inicial para aplicar operaciones de ajustes de revelado como datos.
 - [x] Creado `RenderingEngine` inicial con request/result normalizados y passthrough compatible.
 - [x] Definido `OperationHistory` con undo/redo puro a nivel de modelo.
+- [x] Definidos presets como colecciones serializables de operaciones de revelado.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -148,10 +149,10 @@ Cada cambio debe quedar registrado como operacion reversible o reconstruible.
 
 Los presets son colecciones de operaciones, sin logica propia.
 
-- [ ] Definir formato de preset.
-- [ ] Crear aplicador de presets como wrapper sobre operaciones existentes.
-- [ ] Persistir presets localmente.
-- [ ] Preparar import/export local de presets.
+- [x] Definir formato de preset.
+- [x] Crear aplicador de presets como wrapper sobre operaciones existentes.
+- [x] Persistir presets localmente.
+- [x] Preparar import/export local de presets.
 
 ### P7 - Fase 7: Arquitectura IA
 

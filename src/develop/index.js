@@ -32,3 +32,12 @@ export {
   undoPhotoOperation,
   redoPhotoOperation,
 } from "./operation-history.js";
+
+export {
+  createDevelopPreset,
+  createPresetOperation,
+  applyPresetToAdjustments,
+  applyPresetToPhoto,
+  serializeDevelopPreset,
+  parseDevelopPreset,
+} from "./presets.js";
