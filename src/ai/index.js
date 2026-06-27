@@ -7,3 +7,10 @@ export {
   createSmartSearch,
   normalizeAIOperations,
 } from "./ai-contracts.js";
+
+export {
+  createPromptEditInstruction,
+  parsePromptEditInstruction,
+  applyPromptEditInstruction,
+  serializePromptEditInstruction,
+} from "./prompt-editing.js";
