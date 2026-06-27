@@ -9,5 +9,10 @@ export {
 } from "./operations.js";
 
 export {
+  PHOTO_SOURCE_TYPES,
+  createPhotoSource,
+  createPhotoMetadata,
   createPhotoModel,
+  createPhotoModelFromMediaItem,
+  createPhotoModelsFromMediaItems,
 } from "./photo-model.js";

@@ -940,7 +940,7 @@ button {
   grid-template-areas: "icon name count";
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 6px 92px 6px 8px;
   border: 0;
   border-radius: 6px 0 0 6px;
   background: transparent;
@@ -983,6 +983,7 @@ button {
   text-align: right;
 }
 
+.edit-recent-button,
 .refresh-recent-button,
 .remove-recent-button {
   position: absolute;
@@ -1002,6 +1003,10 @@ button {
   transition: opacity 120ms ease, color 120ms ease;
 }
 
+.edit-recent-button {
+  right: 56px;
+}
+
 .refresh-recent-button {
   right: 28px;
 }
@@ -1010,18 +1015,47 @@ button {
   right: 0;
 }
 
+.folder-rename-input {
+  position: absolute;
+  top: 3px;
+  right: 92px;
+  bottom: 3px;
+  left: 32px;
+  z-index: 3;
+  min-width: 0;
+  padding: 3px 7px;
+  border: 1px solid var(--text);
+  border-radius: 5px;
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.recent-folder-item.is-renaming .recent-folder-count,
+.recent-folder-item.is-renaming .edit-recent-button,
+.recent-folder-item.is-renaming .refresh-recent-button,
+.recent-folder-item.is-renaming .remove-recent-button {
+  visibility: hidden;
+}
+
 .recent-folder-item:hover .refresh-recent-button,
 .recent-folder-item:hover .remove-recent-button,
+.recent-folder-item:hover .edit-recent-button,
 .refresh-recent-button:focus-visible,
-.remove-recent-button:focus-visible {
+.remove-recent-button:focus-visible,
+.edit-recent-button:focus-visible {
   opacity: 1;
 }
 
+.edit-recent-button:hover,
 .refresh-recent-button:hover,
 .remove-recent-button:hover {
   color: var(--text);
 }
 
+.edit-recent-button i,
 .refresh-recent-button i,
 .remove-recent-button i {
   font-size: 12px;

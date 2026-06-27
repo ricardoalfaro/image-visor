@@ -6,7 +6,14 @@ Visor local de imágenes y videos optimizado para explorar carpetas del sistema 
 
 ## 🛠️ Stack Tecnológico
 
-El proyecto está diseñado bajo una filosofía **zero-dependencies** (sin librerías externas ni `node_modules`), lo que garantiza portabilidad y tiempos de carga inmediatos.
+El proyecto está diseñado bajo una filosofía **sin build step y sin `node_modules`**: la aplicación corre con HTML, CSS y JavaScript nativo, y el servidor opcional usa solo módulos estándar de Node.js.
+
+La interfaz actualmente carga recursos visuales desde CDN:
+
+- Google Fonts para la familia tipográfica.
+- Font Awesome para iconos.
+
+Estos recursos no requieren instalación local, pero sí son dependencias externas de presentación cuando la app se usa con conexión. El objetivo arquitectónico sigue siendo evitar dependencias de runtime o toolchain salvo una decisión explícita.
 
 ### Frontend
 - **HTML5:** Estructura semántica avanzada utilizando etiquetas como `<main>`, `<section>`, `<figure>`, `<figcaption>` y `<aside>`.

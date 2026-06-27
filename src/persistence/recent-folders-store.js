@@ -39,9 +39,11 @@ export async function rememberRecentFolder(folder) {
     return;
   }
 
+  const existingFolder = state.recentFolders.find((recentFolder) => recentFolder.id === folder.id);
   const nextFolder = {
     id: folder.id,
     name: folder.name,
+    alias: folder.alias || existingFolder?.alias || "",
     canReopen: Boolean(folder.canReopen),
     path: folder.path || "",
     source: folder.source || "browser",
@@ -59,6 +61,18 @@ export async function rememberRecentFolder(folder) {
   if (folder.handle) {
     await storeDirectoryHandle(nextFolder.id, folder.handle);
   }
+}
+
+export function renameRecentFolder(folderId, alias) {
+  const recentFolder = state.recentFolders.find((folder) => folder.id === folderId);
+
+  if (!recentFolder) {
+    return;
+  }
+
+  recentFolder.alias = typeof alias === "string" ? alias.trim() : "";
+  saveRecentFolders();
+  renderRecentFolders();
 }
 
 async function hydrateStoredFolderCounts() {

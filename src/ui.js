@@ -15,7 +15,7 @@ import {
   favoriteFolderButton
 } from "./dom.js";
 import { openRecentFolder, refreshRecentFolder } from "./file-loader.js";
-import { removeRecentFolder } from "./storage.js";
+import { removeRecentFolder, renameRecentFolder } from "./storage.js";
 import { FAVORITES_FOLDER_PATH } from "./constants.js";
 import { getAvailableFavorites, selectFolder } from "./viewer.js";
 
@@ -97,48 +97,104 @@ export function renderRecentFolders() {
   state.recentFolders.forEach((folder) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
+    const editButton = document.createElement("button");
     const refreshButton = document.createElement("button");
     const removeButton = document.createElement("button");
     const icon = document.createElement("i");
+    const editIcon = document.createElement("i");
     const refreshIcon = document.createElement("i");
     const removeIcon = document.createElement("i");
     const label = document.createElement("span");
     const count = document.createElement("span");
+    const displayName = getFolderDisplayName(folder);
 
     item.className = "recent-folder-item";
     button.className = "recent-folder-button";
     button.type = "button";
-    button.title = `${folder.name}, ${getFolderPhotoCountLabel(folder)}`;
+    button.title = `${displayName}, ${getFolderPhotoCountLabel(folder)}`;
     button.setAttribute("aria-label", button.title);
     icon.className = "fa-solid fa-folder";
     icon.setAttribute("aria-hidden", "true");
     label.className = "recent-folder-name";
-    label.textContent = folder.name;
+    label.textContent = displayName;
     count.className = "recent-folder-count";
     count.textContent = Number.isInteger(folder.mediaCount) ? String(folder.mediaCount) : "–";
     count.setAttribute("aria-label", getFolderPhotoCountLabel(folder));
+    editButton.className = "edit-recent-button";
+    editButton.type = "button";
+    editButton.title = `Renombrar ${displayName}`;
+    editButton.setAttribute("aria-label", `Renombrar ${displayName}`);
+    editIcon.className = "fa-solid fa-pen";
+    editIcon.setAttribute("aria-hidden", "true");
     refreshButton.className = "refresh-recent-button";
     refreshButton.type = "button";
-    refreshButton.title = `Actualizar ${folder.name}`;
-    refreshButton.setAttribute("aria-label", `Actualizar ${folder.name}`);
+    refreshButton.title = `Actualizar ${displayName}`;
+    refreshButton.setAttribute("aria-label", `Actualizar ${displayName}`);
     refreshIcon.className = "fa-solid fa-rotate-right";
     refreshIcon.setAttribute("aria-hidden", "true");
     removeButton.className = "remove-recent-button";
     removeButton.type = "button";
-    removeButton.title = `Quitar ${folder.name}`;
-    removeButton.setAttribute("aria-label", `Quitar ${folder.name} de recientes`);
+    removeButton.title = `Quitar ${displayName}`;
+    removeButton.setAttribute("aria-label", `Quitar ${displayName} de recientes`);
     removeIcon.className = "fa-solid fa-xmark";
     removeIcon.setAttribute("aria-hidden", "true");
 
     button.append(icon, label, count);
     button.addEventListener("click", () => openRecentFolder(folder.id));
+    editButton.append(editIcon);
+    editButton.addEventListener("click", () => beginFolderRename(item, folder));
     refreshButton.append(refreshIcon);
     refreshButton.addEventListener("click", () => refreshRecentFolder(folder.id));
     removeButton.append(removeIcon);
     removeButton.addEventListener("click", () => removeRecentFolder(folder.id));
-    item.append(button, refreshButton, removeButton);
+    item.append(button, editButton, refreshButton, removeButton);
     recentFoldersList.append(item);
   });
+}
+
+function getFolderDisplayName(folder) {
+  return folder.alias?.trim() || folder.name;
+}
+
+function beginFolderRename(item, folder) {
+  if (item.classList.contains("is-renaming")) {
+    return;
+  }
+
+  const input = document.createElement("input");
+  let finished = false;
+  input.className = "folder-rename-input";
+  input.type = "text";
+  input.value = getFolderDisplayName(folder);
+  input.maxLength = 80;
+  input.setAttribute("aria-label", `Renombrar ${getFolderDisplayName(folder)}`);
+  item.classList.add("is-renaming");
+  item.append(input);
+  input.focus();
+  input.select();
+
+  const finish = (save) => {
+    if (finished) return;
+    finished = true;
+    const nextAlias = input.value.trim();
+    item.classList.remove("is-renaming");
+    input.remove();
+
+    if (save) {
+      renameRecentFolder(folder.id, nextAlias === folder.name ? "" : nextAlias);
+    }
+  };
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finish(true);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      finish(false);
+    }
+  });
+  input.addEventListener("blur", () => finish(true));
 }
 
 function getFolderPhotoCountLabel(folder) {

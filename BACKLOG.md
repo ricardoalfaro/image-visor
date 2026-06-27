@@ -41,6 +41,14 @@ La funcionalidad existente debe mantenerse en todo momento:
 
 ## Prioridades
 
+## Estado De Sesion
+
+- [x] Rescatado desde trabajo local previo: aliases persistentes para carpetas recientes, adaptados a `src/persistence/recent-folders-store.js`.
+- [x] Corregida la documentacion de dependencias externas/CDN en README.
+- [x] Creado modelo `Photo` inicial y adaptador puro desde media items actuales, sin integrar todavia en UI ni persistencia.
+- [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
+- [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
+
 ### P0 - Seguridad Del Producto Actual
 
 Estas tareas protegen el comportamiento existente antes de introducir motores nuevos.
@@ -48,7 +56,7 @@ Estas tareas protegen el comportamiento existente antes de introducir motores nu
 - [x] Documentar arquitectura actual y arquitectura objetivo en `ARCHITECTURE.md`.
 - [x] Definir criterios minimos de verificacion manual para visor, favoritos, carpetas recientes, slideshow, video, zoom y fullscreen.
 - [x] Identificar responsabilidades actuales de `file-loader.js`, `viewer.js`, `favorites.js`, `storage.js`, `zoom-pan.js` y `ui.js`.
-- [ ] Corregir discrepancias de documentacion: el README dice zero-dependencies, pero `index.html` usa Google Fonts y Font Awesome desde CDN.
+- [x] Corregir discrepancias de documentacion: el README dice zero-dependencies, pero `index.html` usa Google Fonts y Font Awesome desde CDN.
 
 ### P1 - Fase 1: Reestructuracion Arquitectonica
 
@@ -79,14 +87,14 @@ Preparar capas sin cambiar la interfaz ni el comportamiento.
 
 Introducir el modelo de datos no destructivo.
 
-- [ ] Definir `Photo` como entidad interna.
-- [ ] Incluir referencia al archivo original.
-- [ ] Incluir metadata basica.
-- [ ] Incluir rating.
-- [ ] Incluir etiquetas.
-- [ ] Incluir ajustes de edicion.
-- [ ] Incluir historial de operaciones.
-- [ ] Incluir versiones virtuales.
+- [x] Definir `Photo` como entidad interna.
+- [x] Incluir referencia al archivo original.
+- [x] Incluir metadata basica.
+- [x] Incluir rating.
+- [x] Incluir etiquetas.
+- [x] Incluir ajustes de edicion.
+- [x] Incluir historial de operaciones.
+- [x] Incluir versiones virtuales.
 - [ ] Migrar favoritos para que sean propiedad del modelo fotografico, sin perder compatibilidad con favoritos existentes.
 
 ### P3 - Fase 3: Develop Engine Inicial
