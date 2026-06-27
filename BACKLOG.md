@@ -49,6 +49,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Integrado `state.photos` como modelo interno paralelo al cargar carpetas, sin cambiar UI ni persistencia.
 - [x] Migrados favoritos para mantener `Photo` interno preservando compatibilidad con media items actuales.
 - [x] Implementado motor inicial para aplicar operaciones de ajustes de revelado como datos.
+- [x] Creado `RenderingEngine` inicial con request/result normalizados y passthrough compatible.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -126,12 +127,12 @@ Implementar ajustes como operaciones de datos, no como manipulaciones directas d
 
 Desacoplar renderizado de la interfaz.
 
-- [ ] Crear `RenderingEngine`.
-- [ ] Definir entrada: foto original + operaciones/ajustes.
-- [ ] Definir salida: bitmap/canvas/object URL/render target segun necesidad.
+- [x] Crear `RenderingEngine`.
+- [x] Definir entrada: foto original + operaciones/ajustes.
+- [x] Definir salida: bitmap/canvas/object URL/render target segun necesidad.
 - [ ] Hacer que la UI modifique estado y solicite render.
 - [ ] Evitar que controles visuales modifiquen directamente `img.src` para ediciones.
-- [ ] Mantener compatibilidad con video, que no pasa por el revelador fotografico inicial.
+- [x] Mantener compatibilidad con video, que no pasa por el revelador fotografico inicial.
 
 ### P5 - Fase 5: Historial Completo
 
