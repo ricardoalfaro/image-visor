@@ -1,6 +1,7 @@
 import { FAVORITES_DB_NAME, FAVORITES_DB_STORE, FAVORITES_KEY } from "../constants.js";
 import { state } from "../state.js";
-import { PHOTO_SOURCE_TYPES, createPhotoModel } from "../develop/index.js";
+import { PHOTO_SOURCE_TYPES, applyHistoryToPhoto, createPhotoModel } from "../develop/index.js";
+import { getPhotoHistory } from "./photo-history-store.js";
 
 export function getFavoriteKey(media) {
   if (media?.favoriteKey) {
@@ -30,7 +31,10 @@ export async function loadFavorites() {
   }
 
   const records = await getAllFavoriteRecords();
-  state.favoritePhotos = records.map(recordToPhoto).filter(Boolean);
+  state.favoritePhotos = records
+    .map(recordToPhoto)
+    .filter(Boolean)
+    .map((photo) => applyHistoryToPhoto(photo, getPhotoHistory(photo.id)));
   state.favoriteMedia = records.map(recordToMedia).filter(Boolean);
 
   for (const media of state.favoriteMedia) {

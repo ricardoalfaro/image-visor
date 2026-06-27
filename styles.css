@@ -889,6 +889,97 @@ button {
   opacity: 0.52;
 }
 
+.develop-section {
+  margin-top: 14px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.develop-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.develop-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.develop-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.develop-action-button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.develop-action-button:hover:not(:disabled) {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.develop-action-button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.develop-action-button i {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.develop-empty {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.develop-controls {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.develop-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.develop-control output {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.develop-control input {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: var(--text);
+}
+
 .clear-recent-button {
   width: 28px;
   height: 28px;

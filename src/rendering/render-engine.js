@@ -102,11 +102,29 @@ async function renderSourcePassthrough(request) {
 }
 
 function getRenderMetadata(request) {
+  const cssFilter = getAdjustmentCssFilter(request.adjustments);
+
   return {
     mediaType: request.photo?.metadata?.mediaType || request.media?.type || "image",
     hasAdjustments: Object.entries(request.adjustments).some(([key, value]) => {
       const defaultValue = createDevelopAdjustments()[key];
       return JSON.stringify(value) !== JSON.stringify(defaultValue);
     }),
+    cssFilter,
   };
+}
+
+function getAdjustmentCssFilter(adjustments) {
+  const exposure = Number(adjustments.exposure) || 0;
+  const contrast = Number(adjustments.contrast) || 0;
+  const saturation = Number(adjustments.saturation) || 0;
+  const brightness = clamp(1 + exposure * 0.28, 0.25, 2.25);
+  const contrastValue = clamp(1 + contrast / 100, 0.2, 2.4);
+  const saturationValue = clamp(1 + saturation / 100, 0, 2.5);
+
+  return `brightness(${brightness}) contrast(${contrastValue}) saturate(${saturationValue})`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }

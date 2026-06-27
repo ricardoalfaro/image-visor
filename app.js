@@ -5,7 +5,8 @@ import {
   resetZoomButton, themeToggleButton, closeViewerButton, menuButton,
   closeSidebarButton, sidebarScrim, clearRecentFoldersButton, imageViewport,
   controls, activeImage, activeVideo, photoFrame, folderNav, sortSelect,
-  sidebarImportButton, favoriteButton
+  sidebarImportButton, favoriteButton, developControls, developEmptyState,
+  developUndoButton, developResetButton, developRedoButton, developAdjustmentInputs
 } from "./src/dom.js";
 import {
   handleBrowserFolderIntent, handleFolderSelection, loadLocalFolder, closeViewer
@@ -24,8 +25,16 @@ import {
 import { loadRecentFolders, clearRecentFolders } from "./src/storage.js";
 import { loadFavorites, toggleFavorite } from "./src/favorites.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
+import { getPhotoIdFromMediaItem } from "./src/develop/index.js";
+import {
+  redoPhotoAdjustment,
+  resetPhotoAdjustments,
+  setPhotoAdjustment,
+  undoPhotoAdjustment
+} from "./src/application/index.js";
 
 let favoriteControlTimer = 0;
+let isSyncingDevelopControls = false;
 
 function revealFullscreenFavorite() {
   if (!document.fullscreenElement || isActiveVideo()) {
@@ -176,6 +185,78 @@ function canOpenFolderFromKeyboard(event) {
   return !target.closest("button, input, select, textarea, a, [contenteditable='true']");
 }
 
+function getActivePhoto() {
+  const activeMedia = state.images[state.activeIndex];
+
+  if (!activeMedia || activeMedia.type === "video") {
+    return null;
+  }
+
+  const photoId = getPhotoIdFromMediaItem(activeMedia);
+  return state.photos.find((photo) => photo.id === photoId)
+    || state.favoritePhotos.find((photo) => photo.id === photoId)
+    || null;
+}
+
+function renderDevelopPanel() {
+  const activePhoto = getActivePhoto();
+  isSyncingDevelopControls = true;
+
+  developControls.hidden = !activePhoto;
+  developEmptyState.classList.toggle("is-hidden", Boolean(activePhoto));
+  developUndoButton.disabled = !activePhoto || activePhoto.history.past.length === 0;
+  developResetButton.disabled = !activePhoto || activePhoto.history.past.length === 0;
+  developRedoButton.disabled = !activePhoto || activePhoto.history.future.length === 0;
+
+  for (const input of developAdjustmentInputs) {
+    const key = input.dataset.developAdjustment;
+    const value = activePhoto?.adjustments?.[key] ?? 0;
+    input.disabled = !activePhoto;
+    input.value = String(value);
+    updateDevelopOutput(key, value);
+  }
+
+  isSyncingDevelopControls = false;
+}
+
+function updateDevelopOutput(key, value) {
+  const output = developControls.querySelector(`[data-develop-output="${key}"]`);
+
+  if (output) {
+    output.value = formatDevelopValue(value);
+    output.textContent = formatDevelopValue(value);
+  }
+}
+
+function formatDevelopValue(value) {
+  const numericValue = Number(value) || 0;
+  return numericValue > 0 ? `+${numericValue}` : String(numericValue);
+}
+
+async function applyDevelopAdjustment(key, value) {
+  const activePhoto = getActivePhoto();
+
+  if (!activePhoto) {
+    return;
+  }
+
+  await setPhotoAdjustment(activePhoto.id, key, value);
+  await renderActiveImage();
+  renderDevelopPanel();
+}
+
+async function runDevelopAction(action) {
+  const activePhoto = getActivePhoto();
+
+  if (!activePhoto) {
+    return;
+  }
+
+  await action(activePhoto.id);
+  await renderActiveImage();
+  renderDevelopPanel();
+}
+
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
 serverButton.addEventListener("click", loadLocalFolder);
@@ -230,14 +311,28 @@ sortSelect.addEventListener("change", (event) => {
   state.sortBy = event.target.value;
   applyFolderFilter({ keepIndex: true });
 });
+for (const input of developAdjustmentInputs) {
+  input.addEventListener("input", () => {
+    updateDevelopOutput(input.dataset.developAdjustment, input.value);
+  });
+  input.addEventListener("change", async () => {
+    if (isSyncingDevelopControls) return;
+    await applyDevelopAdjustment(input.dataset.developAdjustment, Number(input.value));
+  });
+}
+developUndoButton.addEventListener("click", () => runDevelopAction(undoPhotoAdjustment));
+developResetButton.addEventListener("click", () => runDevelopAction(resetPhotoAdjustments));
+developRedoButton.addEventListener("click", () => runDevelopAction(redoPhotoAdjustment));
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);
 document.addEventListener("click", handleViewerOutsideClick);
 document.addEventListener("keydown", handleKeyboard);
+document.addEventListener("imagevisor:active-media-change", renderDevelopPanel);
 
 setThemePreference("auto", { persist: false });
 await loadRecentFolders();
 await loadFavorites();
 renderRecentFolders();
 renderFavorites();
+renderDevelopPanel();
 initializeOnboarding();

@@ -136,6 +136,40 @@
             <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
           </button>
         </section>
+        <section id="developPanel" class="develop-section" aria-labelledby="developPanelTitle">
+          <div class="develop-section-header">
+            <h3 id="developPanelTitle">Revelado</h3>
+            <div class="develop-actions" aria-label="Acciones de revelado">
+              <button id="developUndoButton" class="develop-action-button" type="button" aria-label="Deshacer ajuste" title="Deshacer ajuste" disabled>
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+              </button>
+              <button id="developResetButton" class="develop-action-button" type="button" aria-label="Restablecer ajustes" title="Restablecer ajustes" disabled>
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+              </button>
+              <button id="developRedoButton" class="develop-action-button" type="button" aria-label="Rehacer ajuste" title="Rehacer ajuste" disabled>
+                <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+          <p id="developEmptyState" class="develop-empty">Selecciona una imagen para revelar.</p>
+          <div id="developControls" class="develop-controls" hidden>
+            <label class="develop-control">
+              <span>Exposición</span>
+              <output data-develop-output="exposure">0</output>
+              <input data-develop-adjustment="exposure" type="range" min="-2" max="2" step="0.1" value="0">
+            </label>
+            <label class="develop-control">
+              <span>Contraste</span>
+              <output data-develop-output="contrast">0</output>
+              <input data-develop-adjustment="contrast" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+            <label class="develop-control">
+              <span>Saturación</span>
+              <output data-develop-output="saturation">0</output>
+              <input data-develop-adjustment="saturation" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+          </div>
+        </section>
         <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
           <div class="recent-section-header">
             <h3 id="recentFoldersTitle">Carpetas</h3>

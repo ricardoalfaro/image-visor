@@ -204,12 +204,14 @@ export async function renderActiveImage() {
 
   if (!hasImages) {
     clearActiveObjectUrl();
+    activeImage.style.filter = "";
     activeImage.removeAttribute("src");
     activeImage.alt = "";
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
     activePosition.textContent = "";
+    notifyActiveMediaChange();
     return;
   }
 
@@ -219,6 +221,7 @@ export async function renderActiveImage() {
 
   if (isVideo) {
     const mediaUrl = getImageUrl(image);
+    activeImage.style.filter = "";
     activeImage.removeAttribute("src");
     activeImage.alt = "";
     activeVideo.autoplay = true;
@@ -230,7 +233,9 @@ export async function renderActiveImage() {
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
-    const mediaUrl = await getRenderedImageUrl(image);
+    const renderResult = await getRenderedImageResult(image);
+    const mediaUrl = getRenderedImageUrl(renderResult, image);
+    activeImage.style.filter = renderResult.metadata.cssFilter || "";
     activeImage.src = mediaUrl;
     activeImage.alt = image.name;
   }
@@ -240,6 +245,7 @@ export async function renderActiveImage() {
   updateFrameOrientation();
 
   nextButton.disabled = !canMoveNext();
+  notifyActiveMediaChange();
 }
 
 export function updateFavoriteButton(media = state.images[state.activeIndex]) {
@@ -263,10 +269,12 @@ function getImageUrl(image) {
   return state.currentObjectUrl;
 }
 
-async function getRenderedImageUrl(image) {
+async function getRenderedImageResult(image) {
   const photo = getPhotoForMediaItem(image);
-  const renderResult = await renderMedia({ photo, media: image });
+  return await renderMedia({ photo, media: image });
+}
 
+function getRenderedImageUrl(renderResult, image) {
   if (renderResult.type === RENDER_RESULT_TYPES.SOURCE_URL || renderResult.type === RENDER_RESULT_TYPES.OBJECT_URL) {
     clearActiveObjectUrl();
     return renderResult.value;
@@ -283,7 +291,13 @@ async function getRenderedImageUrl(image) {
 
 function getPhotoForMediaItem(mediaItem) {
   const photoId = getPhotoIdFromMediaItem(mediaItem);
-  return state.photos.find((photo) => photo.id === photoId) || null;
+  return state.photos.find((photo) => photo.id === photoId)
+    || state.favoritePhotos.find((photo) => photo.id === photoId)
+    || null;
+}
+
+function notifyActiveMediaChange() {
+  document.dispatchEvent(new CustomEvent("imagevisor:active-media-change"));
 }
 
 function getPositionText() {

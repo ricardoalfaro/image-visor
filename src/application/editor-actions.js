@@ -37,17 +37,13 @@ async function updatePhotoWithOperation(photoId, operation) {
 }
 
 async function replacePhoto(photoId, nextPhoto) {
-  const photoIndex = state.photos.findIndex((photo) => photo.id === photoId);
+  const didUpdateLoadedPhoto = replacePhotoInCollection("photos", photoId, nextPhoto);
+  const didUpdateFavoritePhoto = replacePhotoInCollection("favoritePhotos", photoId, nextPhoto);
 
-  if (photoIndex === -1) {
+  if (!didUpdateLoadedPhoto && !didUpdateFavoritePhoto) {
     throw new Error(`Photo not found: ${photoId}`);
   }
 
-  state.photos = [
-    ...state.photos.slice(0, photoIndex),
-    nextPhoto,
-    ...state.photos.slice(photoIndex + 1),
-  ];
   savePhotoHistory(nextPhoto.id, nextPhoto.history);
 
   return {
@@ -57,11 +53,27 @@ async function replacePhoto(photoId, nextPhoto) {
 }
 
 function getPhotoOrThrow(photoId) {
-  const photo = state.photos.find((item) => item.id === photoId);
+  const photo = state.photos.find((item) => item.id === photoId)
+    || state.favoritePhotos.find((item) => item.id === photoId);
 
   if (!photo) {
     throw new Error(`Photo not found: ${photoId}`);
   }
 
   return photo;
+}
+
+function replacePhotoInCollection(collectionKey, photoId, nextPhoto) {
+  const photoIndex = state[collectionKey].findIndex((photo) => photo.id === photoId);
+
+  if (photoIndex === -1) {
+    return false;
+  }
+
+  state[collectionKey] = [
+    ...state[collectionKey].slice(0, photoIndex),
+    nextPhoto,
+    ...state[collectionKey].slice(photoIndex + 1),
+  ];
+  return true;
 }
