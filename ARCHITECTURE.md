@@ -84,6 +84,7 @@ Responsable de generar salidas persistibles.
 - Exportar una version revelada.
 - Preparar formatos futuros.
 - Mantener separada la exportacion del render interactivo.
+- Reutilizar resultados del Rendering Engine cuando existan.
 
 ### Plugin System
 

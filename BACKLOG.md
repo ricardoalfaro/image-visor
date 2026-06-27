@@ -57,6 +57,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Agregada persistencia local para historiales por fotografia.
 - [x] Rehidratados historiales persistidos en `state.photos` al cargar carpetas.
 - [x] Creada capa de acciones de aplicacion para editar fotos, persistir historial y solicitar render sin tocar UI.
+- [x] Convertido `ExportEngine` en contrato ejecutable con resultados normalizados y export passthrough.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
