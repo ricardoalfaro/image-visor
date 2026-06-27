@@ -95,6 +95,18 @@ Responsable de extensibilidad controlada.
 
 La IA futura debe entrar por interfaces intercambiables, no por imports directos en UI o Develop Engine.
 
+### AI
+
+Responsable de contratos para capacidades inteligentes futuras.
+
+- Proveedores intercambiables.
+- Intenciones de edicion.
+- Analisis de fotografias.
+- Busqueda inteligente.
+- Normalizacion de operaciones estructuradas compatibles con Develop Engine.
+
+No debe llamar APIs externas directamente desde UI ni producir imagenes. Las respuestas de edicion deben convertirse en operaciones de revelado.
+
 ### UI
 
 Responsable de interaccion y DOM.

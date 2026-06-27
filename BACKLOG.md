@@ -52,6 +52,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Creado `RenderingEngine` inicial con request/result normalizados y passthrough compatible.
 - [x] Definido `OperationHistory` con undo/redo puro a nivel de modelo.
 - [x] Definidos presets como colecciones serializables de operaciones de revelado.
+- [x] Definidos contratos iniciales de IA sin proveedores reales ni llamadas externas.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -158,12 +159,12 @@ Los presets son colecciones de operaciones, sin logica propia.
 
 Crear infraestructura intercambiable, sin implementar modelos todavia.
 
-- [ ] Definir `AIProvider`.
-- [ ] Definir `EditIntent`.
-- [ ] Definir `PhotoAnalysis`.
-- [ ] Definir `SmartSearch`.
-- [ ] Definir adaptadores futuros para OpenAI, Gemini, Anthropic, Ollama y LM Studio.
-- [ ] Asegurar que IA solo produzca parametros estructurados compatibles con el Develop Engine.
+- [x] Definir `AIProvider`.
+- [x] Definir `EditIntent`.
+- [x] Definir `PhotoAnalysis`.
+- [x] Definir `SmartSearch`.
+- [x] Definir adaptadores futuros para OpenAI, Gemini, Anthropic, Ollama y LM Studio.
+- [x] Asegurar que IA solo produzca parametros estructurados compatibles con el Develop Engine.
 
 ### P8 - Fase 8: Prompt Editing
 
