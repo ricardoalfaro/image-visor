@@ -120,6 +120,17 @@ Responsable de interaccion y DOM.
 
 La UI modifica estado o invoca servicios. No debe editar imagenes directamente.
 
+### Application
+
+Responsable de acciones de caso de uso entre UI, Develop Engine, Rendering Engine y Persistence.
+
+- Aplicar ajustes a fotos.
+- Persistir historiales.
+- Solicitar render.
+- Devolver resultados para que la UI decida como presentarlos.
+
+No debe contener layout ni decisiones visuales.
+
 ### Persistence
 
 Responsable de almacenamiento local.

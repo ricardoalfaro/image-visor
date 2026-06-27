@@ -1,1 +1,1 @@
-export * from "./persistence/recent-folders-store.js";
+export * from "./persistence/index.js";

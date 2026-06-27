@@ -56,6 +56,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Definido prompt editing estructurado sobre operaciones, sin generacion de imagenes.
 - [x] Agregada persistencia local para historiales por fotografia.
 - [x] Rehidratados historiales persistidos en `state.photos` al cargar carpetas.
+- [x] Creada capa de acciones de aplicacion para editar fotos, persistir historial y solicitar render sin tocar UI.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -136,6 +137,7 @@ Desacoplar renderizado de la interfaz.
 - [x] Crear `RenderingEngine`.
 - [x] Definir entrada: foto original + operaciones/ajustes.
 - [x] Definir salida: bitmap/canvas/object URL/render target segun necesidad.
+- [x] Crear acciones de aplicacion que modifican estado y solicitan render.
 - [ ] Hacer que la UI modifique estado y solicite render.
 - [ ] Evitar que controles visuales modifiquen directamente `img.src` para ediciones.
 - [x] Mantener compatibilidad con video, que no pasa por el revelador fotografico inicial.
