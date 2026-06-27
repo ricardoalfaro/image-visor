@@ -54,6 +54,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Definidos presets como colecciones serializables de operaciones de revelado.
 - [x] Definidos contratos iniciales de IA sin proveedores reales ni llamadas externas.
 - [x] Definido prompt editing estructurado sobre operaciones, sin generacion de imagenes.
+- [x] Agregada persistencia local para historiales por fotografia.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -144,7 +145,7 @@ Cada cambio debe quedar registrado como operacion reversible o reconstruible.
 
 - [x] Definir `OperationHistory`.
 - [x] Agregar undo/redo a nivel de modelo.
-- [ ] Persistir historial por fotografia.
+- [x] Persistir historial por fotografia.
 - [x] Asegurar que presets y prompt editing reutilicen el mismo formato de operaciones.
 
 ### P6 - Fase 6: Presets

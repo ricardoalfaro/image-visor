@@ -12,6 +12,7 @@ export const THEME_SEQUENCE = ["auto", "light", "dark"];
 export const RECENT_FOLDERS_KEY = "imageVisorRecentFolders";
 export const FAVORITES_KEY = "imageVisorFavorites";
 export const DEVELOP_PRESETS_KEY = "imageVisorDevelopPresets";
+export const PHOTO_HISTORIES_KEY = "imageVisorPhotoHistories";
 export const FAVORITES_FOLDER_PATH = "__image_visor_favorites__";
 export const FAVORITES_DB_NAME = "imageVisorFavorites";
 export const FAVORITES_DB_STORE = "media";
