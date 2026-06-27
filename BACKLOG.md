@@ -4,7 +4,7 @@ Este backlog documenta hacia donde evoluciona el proyecto y sirve como contexto 
 
 ## Norte Del Proyecto
 
-Transformar Image Vision Pro en Image Edition Pro: un revelador fotografico moderno, local-first, zero-dependencies, basado en Vanilla JavaScript ES Modules y edicion no destructiva.
+Transformar Image Viewer Pro en Image Edition Pro: un revelador fotografico moderno, local-first, sin build step ni `node_modules`, basado en Vanilla JavaScript ES Modules y edicion no destructiva.
 
 La funcionalidad existente debe mantenerse en todo momento:
 
@@ -39,30 +39,73 @@ La funcionalidad existente debe mantenerse en todo momento:
 - Antes de cada push remoto o cierre de sesion, actualizar este backlog con el estado real del trabajo.
 - La actualizacion del backlog debe quedar comiteada y pusheada junto con el resto de cambios.
 
-## Prioridades
+## Estado Actual
 
-## Estado De Sesion
+### Arquitectura
 
-- [x] Rescatado desde trabajo local previo: aliases persistentes para carpetas recientes, adaptados a `src/persistence/recent-folders-store.js`.
-- [x] Corregida la documentacion de dependencias externas/CDN en README.
-- [x] Creado modelo `Photo` inicial y adaptador puro desde media items actuales, sin integrar todavia en UI ni persistencia.
-- [x] Integrado `state.photos` como modelo interno paralelo al cargar carpetas, sin cambiar UI ni persistencia.
-- [x] Migrados favoritos para mantener `Photo` interno preservando compatibilidad con media items actuales.
-- [x] Implementado motor inicial para aplicar operaciones de ajustes de revelado como datos.
-- [x] Creado `RenderingEngine` inicial con request/result normalizados y passthrough compatible.
-- [x] Definido `OperationHistory` con undo/redo puro a nivel de modelo.
-- [x] Definidos presets como colecciones serializables de operaciones de revelado.
-- [x] Definidos contratos iniciales de IA sin proveedores reales ni llamadas externas.
-- [x] Definido prompt editing estructurado sobre operaciones, sin generacion de imagenes.
-- [x] Agregada persistencia local para historiales por fotografia.
-- [x] Rehidratados historiales persistidos en `state.photos` al cargar carpetas.
-- [x] Creada capa de acciones de aplicacion para editar fotos, persistir historial y solicitar render sin tocar UI.
-- [x] Convertido `ExportEngine` en contrato ejecutable con resultados normalizados y export passthrough.
-- [x] Desacoplada persistencia de carpetas recientes del render de UI.
-- [x] Integrado el visor con `RenderingEngine` para imagenes sin cambios visuales.
-- [x] Agregada primera UI tangible de revelado con exposicion, contraste, saturacion, reset, undo y redo.
-- [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
-- [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
+- [x] Estructura base de capas creada: `catalog`, `media`, `develop`, `rendering`, `export`, `plugins`, `persistence`, `application`, `ai`, `ui`.
+- [x] `Photo` existe como modelo interno no destructivo.
+- [x] Los media items actuales se adaptan a `Photo`.
+- [x] `state.photos` se hidrata al cargar carpetas.
+- [x] Favoritos mantienen `Photo` interno sin perder compatibilidad con media items existentes.
+- [x] `OperationHistory` soporta undo/redo a nivel de modelo.
+- [x] Los historiales se persisten localmente por fotografia.
+- [x] Los historiales persistidos se rehidratan al cargar carpetas y favoritos.
+- [x] Presets existen como colecciones serializables de operaciones.
+- [x] Prompt editing existe como instrucciones estructuradas sobre operaciones.
+- [x] Contratos iniciales de IA definidos sin proveedores reales ni llamadas externas.
+- [x] `RenderingEngine` existe y el visor lo usa para imagenes.
+- [x] `ExportEngine` existe como export passthrough normalizado.
+- [x] `Application` concentra acciones de edicion, persistencia de historial y solicitudes de render.
+- [x] Persistencia de carpetas recientes ya no renderiza UI directamente.
+
+### Producto Tangible
+
+- [x] Sidebar muestra primera UI de revelado.
+- [x] Exposicion, contraste y saturacion modifican el modelo `Photo`.
+- [x] Reset, undo y redo funcionan sobre historial de operaciones.
+- [x] El visor presenta los ajustes iniciales mediante el resultado del `RenderingEngine`.
+- [ ] Validar UX del panel de revelado en sidebar.
+- [ ] Validar si el set inicial de controles es correcto.
+- [ ] Validar comportamiento esperado de reset/undo/redo.
+- [ ] Definir indicadores visibles para imagen editada.
+- [ ] Definir como se exponen presets en la interfaz.
+
+### Riesgos Y Deuda
+
+- [ ] QA manual completo pendiente tras la primera UI de revelado.
+- [ ] El render real aun es CSS filter para ajustes basicos, no pipeline canvas/bitmap.
+- [ ] Varios ajustes existen como datos, pero no tienen control visible ni efecto visual real.
+- [ ] Presets estan listos como modelo/storage, pero no tienen UI.
+- [ ] Prompt editing e IA son contratos; no hay proveedor ni experiencia visible.
+- [ ] Export aun es passthrough; no exporta una imagen revelada con ajustes aplicados.
+
+## QA Manual Obligatorio
+
+- [ ] La app abre sin errores.
+- [ ] Se puede importar una carpeta con imagenes.
+- [ ] Se puede navegar entre imagenes.
+- [ ] Se puede reproducir video.
+- [ ] Favoritos siguen funcionando.
+- [ ] Carpeta Favoritos sigue funcionando.
+- [ ] Carpetas recientes: renombrar.
+- [ ] Carpetas recientes: reabrir.
+- [ ] Carpetas recientes: refrescar.
+- [ ] Carpetas recientes: eliminar.
+- [ ] Slideshow sigue funcionando.
+- [ ] Zoom sigue funcionando.
+- [ ] Paneo sigue funcionando.
+- [ ] Fullscreen sigue funcionando.
+- [ ] Revelado: exposicion.
+- [ ] Revelado: contraste.
+- [ ] Revelado: saturacion.
+- [ ] Revelado: reset.
+- [ ] Revelado: undo.
+- [ ] Revelado: redo.
+- [ ] Revelado: recargar la app y verificar persistencia.
+- [ ] No hay regresiones visuales graves en mobile.
+
+## Roadmap
 
 ### P0 - Seguridad Del Producto Actual
 
@@ -71,34 +114,20 @@ Estas tareas protegen el comportamiento existente antes de introducir motores nu
 - [x] Documentar arquitectura actual y arquitectura objetivo en `ARCHITECTURE.md`.
 - [x] Definir criterios minimos de verificacion manual para visor, favoritos, carpetas recientes, slideshow, video, zoom y fullscreen.
 - [x] Identificar responsabilidades actuales de `file-loader.js`, `viewer.js`, `favorites.js`, `storage.js`, `zoom-pan.js` y `ui.js`.
-- [x] Corregir discrepancias de documentacion: el README dice zero-dependencies, pero `index.html` usa Google Fonts y Font Awesome desde CDN.
+- [x] Corregir discrepancias de documentacion sobre dependencias externas/CDN.
 
-### P1 - Fase 1: Reestructuracion Arquitectonica
+### P1 - Reestructuracion Arquitectonica
 
-Preparar capas sin cambiar la interfaz ni el comportamiento.
+Preparar capas sin cambiar comportamiento.
 
-- [x] Crear estructura base de carpetas:
-  - `src/catalog/`
-  - `src/media/`
-  - `src/develop/`
-  - `src/rendering/`
-  - `src/export/`
-  - `src/plugins/`
-  - `src/persistence/`
-  - `src/ui/`
-- [x] Mover constantes y utilidades de media hacia `src/media/` con adaptadores para mantener imports existentes.
+- [x] Crear estructura base de carpetas.
+- [x] Mover constantes y utilidades de media hacia `src/media/`.
 - [x] Separar persistencia de favoritos y recientes en `src/persistence/`.
-- [x] Crear contratos minimos para:
-  - Catalog
-  - Media
-  - Develop Engine
-  - Rendering Engine
-  - Export Engine
-  - Plugin System
-- [x] Mantener `app.js` como composition root temporal mientras se migra la arquitectura.
-- [x] Evitar cualquier cambio visual durante esta fase.
+- [x] Crear contratos minimos para catalogo, media, develop, rendering, export y plugins.
+- [x] Crear capa `application` para acciones de caso de uso.
+- [x] Mantener `app.js` como composition root temporal.
 
-### P2 - Fase 2: Modelo Interno De Fotografia
+### P2 - Modelo Interno De Fotografia
 
 Introducir el modelo de datos no destructivo.
 
@@ -111,51 +140,46 @@ Introducir el modelo de datos no destructivo.
 - [x] Incluir historial de operaciones.
 - [x] Incluir versiones virtuales.
 - [x] Crear adaptador desde media items actuales hacia `Photo`.
-- [x] Hidratar el modelo fotografico en runtime sin cambiar UI ni persistencia.
-- [x] Migrar favoritos para que sean propiedad del modelo fotografico, sin perder compatibilidad con favoritos existentes.
+- [x] Hidratar el modelo fotografico en runtime.
+- [x] Migrar favoritos para mantener `Photo` interno.
 
-### P3 - Fase 3: Develop Engine Inicial
+### P3 - Develop Engine Inicial
 
-Implementar ajustes como operaciones de datos, no como manipulaciones directas de UI.
+Implementar ajustes como operaciones de datos.
 
 - [x] Definir formato comun de operacion.
 - [x] Definir estado inicial de ajustes.
-- [x] Implementar Exposure.
-- [x] Implementar Contrast.
-- [x] Implementar Highlights.
-- [x] Implementar Shadows.
-- [x] Implementar Whites.
-- [x] Implementar Blacks.
-- [x] Implementar Temperature.
-- [x] Implementar Tint.
-- [x] Implementar Vibrance.
-- [x] Implementar Saturation.
-- [x] Implementar Crop.
-- [x] Implementar Rotate.
-- [x] Implementar Straighten.
+- [x] Implementar aplicacion de operaciones `setAdjustment` y `resetAdjustments`.
+- [x] Implementar storage e historial para operaciones.
+- [x] Exponer UI inicial para exposicion, contraste y saturacion.
+- [ ] Exponer UI para highlights, shadows, whites, blacks, temperature, tint y vibrance.
+- [ ] Definir interaccion UX para crop, rotate y straighten.
+- [ ] Implementar efecto visual real para todos los ajustes visibles.
 
-### P4 - Fase 4: Render Pipeline
+### P4 - Render Pipeline
 
 Desacoplar renderizado de la interfaz.
 
 - [x] Crear `RenderingEngine`.
 - [x] Definir entrada: foto original + operaciones/ajustes.
-- [x] Definir salida: bitmap/canvas/object URL/render target segun necesidad.
-- [x] Crear acciones de aplicacion que modifican estado y solicitan render.
-- [x] Hacer que la UI modifique estado y solicite render.
-- [x] Evitar que controles visuales modifiquen directamente `img.src` para ediciones.
-- [x] Mantener compatibilidad con video, que no pasa por el revelador fotografico inicial.
+- [x] Definir salida: request/result normalizados.
+- [x] Conectar visor al `RenderingEngine`.
+- [x] Mantener compatibilidad con video.
+- [x] Evitar que controles visuales modifiquen directamente `img.src`.
+- [ ] Reemplazar CSS filters por pipeline canvas/bitmap para ajustes fotografiacos reales.
+- [ ] Definir estrategia de performance para carpetas grandes.
 
-### P5 - Fase 5: Historial Completo
+### P5 - Historial Completo
 
 Cada cambio debe quedar registrado como operacion reversible o reconstruible.
 
 - [x] Definir `OperationHistory`.
 - [x] Agregar undo/redo a nivel de modelo.
 - [x] Persistir historial por fotografia.
-- [x] Asegurar que presets y prompt editing reutilicen el mismo formato de operaciones.
+- [x] Asegurar que sliders, presets y prompt editing reutilicen el mismo formato de operaciones.
+- [ ] Definir UI final de historial o acciones visibles.
 
-### P6 - Fase 6: Presets
+### P6 - Presets
 
 Los presets son colecciones de operaciones, sin logica propia.
 
@@ -163,8 +187,11 @@ Los presets son colecciones de operaciones, sin logica propia.
 - [x] Crear aplicador de presets como wrapper sobre operaciones existentes.
 - [x] Persistir presets localmente.
 - [x] Preparar import/export local de presets.
+- [ ] Disenar UI de presets.
+- [ ] Aplicar presets desde la interfaz.
+- [ ] Guardar preset desde ajustes actuales.
 
-### P7 - Fase 7: Arquitectura IA
+### P7 - Arquitectura IA
 
 Crear infraestructura intercambiable, sin implementar modelos todavia.
 
@@ -174,8 +201,10 @@ Crear infraestructura intercambiable, sin implementar modelos todavia.
 - [x] Definir `SmartSearch`.
 - [x] Definir adaptadores futuros para OpenAI, Gemini, Anthropic, Ollama y LM Studio.
 - [x] Asegurar que IA solo produzca parametros estructurados compatibles con el Develop Engine.
+- [ ] Definir UX para prompt editing antes de integrar proveedor real.
+- [ ] Elegir proveedor inicial solo cuando exista flujo usable sin IA.
 
-### P8 - Fase 8: Prompt Editing
+### P8 - Prompt Editing
 
 La IA traduce lenguaje natural a operaciones estructuradas.
 
@@ -183,15 +212,22 @@ La IA traduce lenguaje natural a operaciones estructuradas.
 - [x] Aplicar instrucciones por el mismo camino que sliders y presets.
 - [x] Registrar cada instruccion en historial.
 - [x] Mantener la restriccion: la IA nunca devuelve imagenes.
+- [ ] Disenar entrada de prompt.
+- [ ] Disenar preview/confirmacion antes de aplicar operaciones sugeridas.
 
-## Primeras Iteraciones Recomendadas
+### P9 - Primera UI De Revelado
 
-1. [x] Crear `ARCHITECTURE.md` con mapa actual, mapa objetivo y reglas de migracion.
-2. [x] Crear carpetas nuevas sin mover logica todavia.
-3. [x] Extraer `constants.js` y partes de `utils.js` relacionadas con media hacia `src/media/`.
-4. [x] Separar storage en modulos de persistencia mas claros.
-5. [x] Crear contratos minimos de `develop`, `rendering`, `export` y `plugins`.
-6. [ ] Verificar manualmente que el visor funciona igual.
+Hacer tangible el nuevo enfoque con una interfaz pequena, revisable y reversible.
+
+- [x] Agregar panel inicial de revelado.
+- [x] Conectar exposicion, contraste y saturacion al modelo.
+- [x] Conectar reset, undo y redo.
+- [ ] Validar ubicacion del panel en sidebar.
+- [ ] Validar densidad, etiquetas y jerarquia de controles.
+- [ ] Definir si los controles deben vivir junto a carpetas o en modo/panel dedicado.
+- [ ] Definir estados para imagen sin seleccionar, video y favoritos.
+- [ ] Definir indicador de cambios no destructivos.
+- [ ] Decidir siguiente set de ajustes visibles.
 
 ## Definicion De Hecho Para Cada Cambio
 
