@@ -48,6 +48,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Creado modelo `Photo` inicial y adaptador puro desde media items actuales, sin integrar todavia en UI ni persistencia.
 - [x] Integrado `state.photos` como modelo interno paralelo al cargar carpetas, sin cambiar UI ni persistencia.
 - [x] Migrados favoritos para mantener `Photo` interno preservando compatibilidad con media items actuales.
+- [x] Implementado motor inicial para aplicar operaciones de ajustes de revelado como datos.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -105,21 +106,21 @@ Introducir el modelo de datos no destructivo.
 
 Implementar ajustes como operaciones de datos, no como manipulaciones directas de UI.
 
-- [ ] Definir formato comun de operacion.
-- [ ] Definir estado inicial de ajustes.
-- [ ] Implementar Exposure.
-- [ ] Implementar Contrast.
-- [ ] Implementar Highlights.
-- [ ] Implementar Shadows.
-- [ ] Implementar Whites.
-- [ ] Implementar Blacks.
-- [ ] Implementar Temperature.
-- [ ] Implementar Tint.
-- [ ] Implementar Vibrance.
-- [ ] Implementar Saturation.
-- [ ] Implementar Crop.
-- [ ] Implementar Rotate.
-- [ ] Implementar Straighten.
+- [x] Definir formato comun de operacion.
+- [x] Definir estado inicial de ajustes.
+- [x] Implementar Exposure.
+- [x] Implementar Contrast.
+- [x] Implementar Highlights.
+- [x] Implementar Shadows.
+- [x] Implementar Whites.
+- [x] Implementar Blacks.
+- [x] Implementar Temperature.
+- [x] Implementar Tint.
+- [x] Implementar Vibrance.
+- [x] Implementar Saturation.
+- [x] Implementar Crop.
+- [x] Implementar Rotate.
+- [x] Implementar Straighten.
 
 ### P4 - Fase 4: Render Pipeline
 

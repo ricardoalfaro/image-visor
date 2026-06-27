@@ -1,11 +1,16 @@
 export {
+  DEVELOP_ADJUSTMENT_KEYS,
   DEFAULT_DEVELOP_ADJUSTMENTS,
   createDevelopAdjustments,
+  isDevelopAdjustmentKey,
+  setDevelopAdjustment,
 } from "./adjustments.js";
 
 export {
   DEVELOP_OPERATION_TYPES,
   createDevelopOperation,
+  applyDevelopOperation,
+  applyDevelopOperations,
 } from "./operations.js";
 
 export {

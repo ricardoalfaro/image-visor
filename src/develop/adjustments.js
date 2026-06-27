@@ -14,9 +14,26 @@ export const DEFAULT_DEVELOP_ADJUSTMENTS = Object.freeze({
   straighten: 0,
 });
 
+export const DEVELOP_ADJUSTMENT_KEYS = Object.freeze(Object.keys(DEFAULT_DEVELOP_ADJUSTMENTS));
+
 export function createDevelopAdjustments(overrides = {}) {
   return {
     ...DEFAULT_DEVELOP_ADJUSTMENTS,
     ...overrides,
+  };
+}
+
+export function isDevelopAdjustmentKey(key) {
+  return DEVELOP_ADJUSTMENT_KEYS.includes(key);
+}
+
+export function setDevelopAdjustment(adjustments, key, value) {
+  if (!isDevelopAdjustmentKey(key)) {
+    throw new Error(`Unknown develop adjustment: ${key}`);
+  }
+
+  return {
+    ...createDevelopAdjustments(adjustments),
+    [key]: value,
   };
 }
