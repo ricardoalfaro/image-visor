@@ -146,7 +146,10 @@ export function renderRecentFolders() {
     refreshButton.append(refreshIcon);
     refreshButton.addEventListener("click", () => refreshRecentFolder(folder.id));
     removeButton.append(removeIcon);
-    removeButton.addEventListener("click", () => removeRecentFolder(folder.id));
+    removeButton.addEventListener("click", async () => {
+      await removeRecentFolder(folder.id);
+      renderRecentFolders();
+    });
     item.append(button, editButton, refreshButton, removeButton);
     recentFoldersList.append(item);
   });
@@ -182,6 +185,7 @@ function beginFolderRename(item, folder) {
 
     if (save) {
       renameRecentFolder(folder.id, nextAlias === folder.name ? "" : nextAlias);
+      renderRecentFolders();
     }
   };
 

@@ -210,7 +210,10 @@ closeViewerButton.addEventListener("click", closeViewer);
 menuButton.addEventListener("click", openSidebar);
 closeSidebarButton.addEventListener("click", closeSidebar);
 sidebarScrim.addEventListener("click", closeSidebar);
-clearRecentFoldersButton.addEventListener("click", clearRecentFolders);
+clearRecentFoldersButton.addEventListener("click", async () => {
+  await clearRecentFolders();
+  renderRecentFolders();
+});
 imageViewport.addEventListener("pointerdown", startImageDrag);
 imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointermove", revealFullscreenFavorite);

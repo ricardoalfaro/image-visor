@@ -4,7 +4,7 @@ import {
   folderInput,
   serverButton,
 } from "./dom.js";
-import { showNotice, hideNotice, closeSidebar, renderFavorites } from "./ui.js";
+import { showNotice, hideNotice, closeSidebar, renderFavorites, renderRecentFolders } from "./ui.js";
 import { getLocalRelativePath, getBrowserSelectedFolderName, getFolderPath, getTopLevelFolder, isSupportedMedia, getMediaType, createRecentFolderToken } from "./utils.js";
 import { 
   storeBrowserFolderFiles,
@@ -35,7 +35,7 @@ export async function handleFolderSelection(event) {
   await loadLocalFiles(files, folderName);
   state.recentFolderFiles.set(recentFolderId, { files, name: folderName });
   const isPersisted = await storeBrowserFolderFiles(recentFolderId, files, folderName);
-  await rememberRecentFolder({
+  await rememberRecentFolderAndRender({
     id: recentFolderId,
     name: folderName,
     canReopen: isPersisted,
@@ -117,7 +117,7 @@ async function loadFolderFromDirectoryPicker() {
     const files = await collectDirectoryFiles(directoryHandle);
     const recentFolderId = await getRecentDirectoryFolderId(directoryHandle);
     await loadLocalFiles(files, directoryHandle.name || "Carpeta local");
-    await rememberRecentFolder({
+    await rememberRecentFolderAndRender({
       id: recentFolderId,
       name: directoryHandle.name || "Carpeta local",
       canReopen: true,
@@ -146,7 +146,7 @@ export async function openRecentFolder(folderId) {
     closeSidebar();
     hideNotice();
     await loadLocalFiles(cachedFolder.files, cachedFolder.name || recentFolder.name);
-    await rememberRecentFolder(recentFolder);
+    await rememberRecentFolderAndRender(recentFolder);
     return;
   }
 
@@ -158,11 +158,12 @@ export async function openRecentFolder(folderId) {
       hideNotice();
       state.recentFolderFiles.set(recentFolder.id, storedFolder);
       await loadLocalFiles(storedFolder.files, storedFolder.name || recentFolder.name);
-      await rememberRecentFolder(recentFolder);
+      await rememberRecentFolderAndRender(recentFolder);
       return;
     }
 
     await markRecentFolderNotReopenable(recentFolder.id);
+    renderRecentFolders();
   }
 
   if (recentFolder.source === "server" && recentFolder.path) {
@@ -188,7 +189,8 @@ export async function openRecentFolder(folderId) {
     const directoryHandle = await getStoredDirectoryHandle(folderId);
 
     if (!directoryHandle) {
-      removeRecentFolder(folderId);
+      await removeRecentFolder(folderId);
+      renderRecentFolders();
       showNotice("Ya no se encontro el permiso de esa carpeta. Elige la carpeta nuevamente.", "warning");
       return;
     }
@@ -204,7 +206,7 @@ export async function openRecentFolder(folderId) {
     hideNotice();
     const files = await collectDirectoryFiles(directoryHandle);
     await loadLocalFiles(files, directoryHandle.name || recentFolder.name);
-    await rememberRecentFolder({
+    await rememberRecentFolderAndRender({
       ...recentFolder,
       name: directoryHandle.name || recentFolder.name,
       canReopen: true,
@@ -237,7 +239,8 @@ export async function refreshRecentFolder(folderId) {
       const directoryHandle = await getStoredDirectoryHandle(recentFolder.id);
 
       if (!directoryHandle) {
-        removeRecentFolder(recentFolder.id);
+        await removeRecentFolder(recentFolder.id);
+        renderRecentFolders();
         showNotice("Ya no se encontro el permiso de esa carpeta. Elige la carpeta nuevamente.", "warning");
         return;
       }
@@ -251,7 +254,7 @@ export async function refreshRecentFolder(folderId) {
 
       const files = await collectDirectoryFiles(directoryHandle);
       await loadLocalFiles(files, directoryHandle.name || recentFolder.name);
-      await rememberRecentFolder({
+      await rememberRecentFolderAndRender({
         ...recentFolder,
         name: directoryHandle.name || recentFolder.name,
         canReopen: true,
@@ -290,13 +293,18 @@ async function loadServerFolder(folder) {
   }));
 
   await loadMediaItems(media, folder.name || "Carpeta local");
-  await rememberRecentFolder({
+  await rememberRecentFolderAndRender({
     id: `server:${folder.path}`,
     name: folder.name || "Carpeta local",
     path: folder.path,
     canReopen: true,
     source: "server",
   });
+}
+
+async function rememberRecentFolderAndRender(folder) {
+  await rememberRecentFolder(folder);
+  renderRecentFolders();
 }
 
 async function collectDirectoryFiles(directoryHandle, parentPath = "") {

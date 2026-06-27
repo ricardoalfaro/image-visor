@@ -6,7 +6,6 @@ import {
   RECENT_BROWSER_FILES_STORE,
 } from "../constants.js";
 import { state } from "../state.js";
-import { renderRecentFolders } from "../ui.js";
 import { getMediaType, isSupportedMedia } from "../media/media-utils.js";
 
 function isValidRecentFolder(folder) {
@@ -56,7 +55,6 @@ export async function rememberRecentFolder(folder) {
   ].slice(0, RECENT_FOLDERS_LIMIT);
   
   saveRecentFolders();
-  renderRecentFolders();
 
   if (folder.handle) {
     await storeDirectoryHandle(nextFolder.id, folder.handle);
@@ -72,7 +70,6 @@ export function renameRecentFolder(folderId, alias) {
 
   recentFolder.alias = typeof alias === "string" ? alias.trim() : "";
   saveRecentFolders();
-  renderRecentFolders();
 }
 
 async function hydrateStoredFolderCounts() {
@@ -97,7 +94,6 @@ export async function removeRecentFolder(folderId) {
   state.recentFolderFiles.delete(folderId);
   saveRecentFolders();
   await removeStoredBrowserFolder(folderId);
-  renderRecentFolders();
 }
 
 export async function markRecentFolderNotReopenable(folderId) {
@@ -109,7 +105,6 @@ export async function markRecentFolderNotReopenable(folderId) {
 
   recentFolder.canReopen = false;
   saveRecentFolders();
-  renderRecentFolders();
 }
 
 export async function clearRecentFolders() {
@@ -117,7 +112,6 @@ export async function clearRecentFolders() {
   state.recentFolderFiles = new Map();
   localStorage.removeItem(RECENT_FOLDERS_KEY);
   await clearStoredBrowserFolders();
-  renderRecentFolders();
 }
 
 export async function openRecentDatabase() {
