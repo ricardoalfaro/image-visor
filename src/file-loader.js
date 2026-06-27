@@ -17,6 +17,7 @@ import {
 import { renderActiveImage, stopSlideshow } from "./viewer.js";
 import { setZoom, resetFullscreenZoom } from "./zoom-pan.js";
 import { syncAvailableFavorites } from "./favorites.js";
+import { createPhotoModelsFromMediaItems } from "./develop/index.js";
 
 export async function handleBrowserFolderIntent() {
   showNotice(BROWSER_PICKER_WARNING, "warning");
@@ -353,6 +354,7 @@ async function loadMediaItems(media, label) {
   stopSlideshow();
 
   state.allMedia = media;
+  state.photos = createPhotoModelsFromMediaItems(state.allMedia);
   await syncAvailableFavorites(state.allMedia);
   state.folders = getFoldersFromMedia(state.allMedia);
   state.activeFolderPath = "";
@@ -373,6 +375,7 @@ export async function closeViewer() {
   state.sourceLabel = "Carpeta local";
   state.images = [];
   state.allMedia = [];
+  state.photos = [];
   state.folders = [];
   state.activeFolderPath = "";
   renderFavorites();

@@ -1,5 +1,6 @@
 import { FAVORITES_DB_NAME, FAVORITES_DB_STORE, FAVORITES_KEY } from "../constants.js";
 import { state } from "../state.js";
+import { PHOTO_SOURCE_TYPES, createPhotoModel } from "../develop/index.js";
 
 export function getFavoriteKey(media) {
   if (media?.favoriteKey) {
@@ -29,6 +30,7 @@ export async function loadFavorites() {
   }
 
   const records = await getAllFavoriteRecords();
+  state.favoritePhotos = records.map(recordToPhoto).filter(Boolean);
   state.favoriteMedia = records.map(recordToMedia).filter(Boolean);
 
   for (const media of state.favoriteMedia) {
@@ -75,6 +77,7 @@ export async function toggleFavorite(media) {
   if (state.favoriteKeys.has(key) || state.favoriteKeys.has(legacyKey)) {
     state.favoriteKeys.delete(key);
     state.favoriteKeys.delete(legacyKey);
+    state.favoritePhotos = state.favoritePhotos.filter((photo) => photo.id !== key);
     state.favoriteMedia = state.favoriteMedia.filter((item) => getFavoriteKey(item) !== key);
     await deleteFavoriteRecord(key);
     saveFavoriteKeys();
@@ -106,6 +109,7 @@ async function persistFavoriteMedia(media, key) {
     lastModified: media.lastModified || 0,
     folder: media.folder || "",
     groupFolder: media.groupFolder || "",
+    photo: createFavoritePhoto(media, key),
     blob,
   };
   const stored = await putFavoriteRecord(record);
@@ -115,10 +119,15 @@ async function persistFavoriteMedia(media, key) {
   }
 
   const favoriteMedia = recordToMedia(record);
+  const favoritePhoto = recordToPhoto(record);
   state.favoriteMedia = [
     ...state.favoriteMedia.filter((item) => getFavoriteKey(item) !== key),
     favoriteMedia,
   ];
+  state.favoritePhotos = [
+    ...state.favoritePhotos.filter((photo) => photo.id !== key),
+    favoritePhoto,
+  ].filter(Boolean);
   return true;
 }
 
@@ -154,6 +163,36 @@ function recordToMedia(record) {
     folder: record.folder || "",
     groupFolder: record.groupFolder || "",
   };
+}
+
+function recordToPhoto(record) {
+  if (record?.photo) {
+    return createPhotoModel(record.photo);
+  }
+
+  const media = recordToMedia(record);
+  return media ? createFavoritePhoto(media, record.key) : null;
+}
+
+function createFavoritePhoto(media, key) {
+  return createPhotoModel({
+    id: key,
+    source: {
+      type: PHOTO_SOURCE_TYPES.FAVORITE,
+      path: media.path || "",
+      name: media.name || media.path || "",
+    },
+    metadata: {
+      name: media.name || media.path || "",
+      path: media.path || "",
+      folder: media.folder || "",
+      groupFolder: media.groupFolder || "",
+      mediaType: media.type || "image",
+      mimeType: media.file?.type || "",
+      size: media.file?.size || media.size || 0,
+      lastModified: media.lastModified || 0,
+    },
+  });
 }
 
 function saveFavoriteKeys() {

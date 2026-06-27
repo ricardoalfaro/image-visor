@@ -46,6 +46,8 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Rescatado desde trabajo local previo: aliases persistentes para carpetas recientes, adaptados a `src/persistence/recent-folders-store.js`.
 - [x] Corregida la documentacion de dependencias externas/CDN en README.
 - [x] Creado modelo `Photo` inicial y adaptador puro desde media items actuales, sin integrar todavia en UI ni persistencia.
+- [x] Integrado `state.photos` como modelo interno paralelo al cargar carpetas, sin cambiar UI ni persistencia.
+- [x] Migrados favoritos para mantener `Photo` interno preservando compatibilidad con media items actuales.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -95,7 +97,9 @@ Introducir el modelo de datos no destructivo.
 - [x] Incluir ajustes de edicion.
 - [x] Incluir historial de operaciones.
 - [x] Incluir versiones virtuales.
-- [ ] Migrar favoritos para que sean propiedad del modelo fotografico, sin perder compatibilidad con favoritos existentes.
+- [x] Crear adaptador desde media items actuales hacia `Photo`.
+- [x] Hidratar el modelo fotografico en runtime sin cambiar UI ni persistencia.
+- [x] Migrar favoritos para que sean propiedad del modelo fotografico, sin perder compatibilidad con favoritos existentes.
 
 ### P3 - Fase 3: Develop Engine Inicial
 

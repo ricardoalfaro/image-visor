@@ -1,6 +1,7 @@
 export const state = {
   images: [],
   allMedia: [],
+  photos: [],
   folders: [],
   activeFolderPath: "",
   sortBy: "name",
@@ -25,6 +26,7 @@ export const state = {
   },
   recentFolders: [],
   favoriteKeys: new Set(),
+  favoritePhotos: [],
   favoriteMedia: [],
   favoriteDbPromise: null,
   recentDbPromise: null,
