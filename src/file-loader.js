@@ -12,12 +12,13 @@ import {
   getStoredBrowserFolderFiles,
   markRecentFolderNotReopenable,
   getStoredDirectoryHandle,
-  removeRecentFolder
+  removeRecentFolder,
+  getPhotoHistory
 } from "./storage.js";
 import { renderActiveImage, stopSlideshow } from "./viewer.js";
 import { setZoom, resetFullscreenZoom } from "./zoom-pan.js";
 import { syncAvailableFavorites } from "./favorites.js";
-import { createPhotoModelsFromMediaItems } from "./develop/index.js";
+import { applyHistoryToPhoto, createPhotoModelsFromMediaItems } from "./develop/index.js";
 
 export async function handleBrowserFolderIntent() {
   showNotice(BROWSER_PICKER_WARNING, "warning");
@@ -354,7 +355,8 @@ async function loadMediaItems(media, label) {
   stopSlideshow();
 
   state.allMedia = media;
-  state.photos = createPhotoModelsFromMediaItems(state.allMedia);
+  state.photos = createPhotoModelsFromMediaItems(state.allMedia)
+    .map((photo) => applyHistoryToPhoto(photo, getPhotoHistory(photo.id)));
   await syncAvailableFavorites(state.allMedia);
   state.folders = getFoldersFromMedia(state.allMedia);
   state.activeFolderPath = "";

@@ -69,10 +69,17 @@ export function applyOperationToPhoto(photo, operation) {
   const currentPhoto = createPhotoModel(photo);
   const history = addHistoryOperation(currentPhoto.history, operation);
 
+  return applyHistoryToPhoto(currentPhoto, history);
+}
+
+export function applyHistoryToPhoto(photo, history) {
+  const currentPhoto = createPhotoModel(photo);
+  const nextHistory = createOperationHistory(history);
+
   return createPhotoModel({
     ...currentPhoto,
-    history,
-    adjustments: getHistoryAdjustments(history),
+    history: nextHistory,
+    adjustments: getHistoryAdjustments(nextHistory),
   });
 }
 

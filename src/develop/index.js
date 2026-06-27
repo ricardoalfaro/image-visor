@@ -29,6 +29,7 @@ export {
   redoHistoryOperation,
   getHistoryAdjustments,
   applyOperationToPhoto,
+  applyHistoryToPhoto,
   undoPhotoOperation,
   redoPhotoOperation,
 } from "./operation-history.js";
