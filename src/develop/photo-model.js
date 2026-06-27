@@ -28,7 +28,7 @@ export function createPhotoModel({
     rating: normalizeRating(rating),
     tags: normalizeTags(tags),
     adjustments: createDevelopAdjustments(adjustments),
-    history: Array.isArray(history) ? [...history] : [],
+    history: normalizeHistory(history),
     virtualCopies: Array.isArray(virtualCopies) ? [...virtualCopies] : [],
   };
 }
@@ -145,4 +145,18 @@ function normalizeTags(tags) {
   }
 
   return [...new Set(tags.map((tag) => String(tag).trim()).filter(Boolean))];
+}
+
+function normalizeHistory(history) {
+  if (Array.isArray(history)) {
+    return {
+      past: history.filter((operation) => operation?.type),
+      future: [],
+    };
+  }
+
+  return {
+    past: Array.isArray(history?.past) ? history.past.filter((operation) => operation?.type) : [],
+    future: Array.isArray(history?.future) ? history.future.filter((operation) => operation?.type) : [],
+  };
 }

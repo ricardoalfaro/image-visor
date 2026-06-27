@@ -50,6 +50,7 @@ La funcionalidad existente debe mantenerse en todo momento:
 - [x] Migrados favoritos para mantener `Photo` interno preservando compatibilidad con media items actuales.
 - [x] Implementado motor inicial para aplicar operaciones de ajustes de revelado como datos.
 - [x] Creado `RenderingEngine` inicial con request/result normalizados y passthrough compatible.
+- [x] Definido `OperationHistory` con undo/redo puro a nivel de modelo.
 - [ ] Verificar manualmente el flujo de renombrar, reabrir y refrescar carpetas recientes.
 - [ ] Verificar manualmente que el visor sigue funcionando igual tras los cambios de modelo no integrado.
 
@@ -138,8 +139,8 @@ Desacoplar renderizado de la interfaz.
 
 Cada cambio debe quedar registrado como operacion reversible o reconstruible.
 
-- [ ] Definir `OperationHistory`.
-- [ ] Agregar undo/redo a nivel de modelo.
+- [x] Definir `OperationHistory`.
+- [x] Agregar undo/redo a nivel de modelo.
 - [ ] Persistir historial por fotografia.
 - [ ] Asegurar que presets y prompt editing reutilicen el mismo formato de operaciones.
 

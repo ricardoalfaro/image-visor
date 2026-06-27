@@ -21,7 +21,7 @@ export function createRenderRequest({
   photo,
   media,
   adjustments = photo?.adjustments,
-  operations = photo?.history || [],
+  operations = getPhotoOperations(photo),
   target = null,
 } = {}) {
   if (!photo && !media) {
@@ -35,6 +35,14 @@ export function createRenderRequest({
     operations: Array.isArray(operations) ? [...operations] : [],
     target,
   };
+}
+
+function getPhotoOperations(photo) {
+  if (Array.isArray(photo?.history)) {
+    return photo.history;
+  }
+
+  return Array.isArray(photo?.history?.past) ? photo.history.past : [];
 }
 
 export function createRenderResult({

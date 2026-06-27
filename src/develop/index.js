@@ -21,3 +21,14 @@ export {
   createPhotoModelFromMediaItem,
   createPhotoModelsFromMediaItems,
 } from "./photo-model.js";
+
+export {
+  createOperationHistory,
+  addHistoryOperation,
+  undoHistoryOperation,
+  redoHistoryOperation,
+  getHistoryAdjustments,
+  applyOperationToPhoto,
+  undoPhotoOperation,
+  redoPhotoOperation,
+} from "./operation-history.js";
