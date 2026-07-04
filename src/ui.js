@@ -6,6 +6,11 @@ import {
   appNoticeText,
   recentSidebar,
   menuButton,
+  adjustmentsButton,
+  fullscreenAdjustmentsButton,
+  sidebarTitle,
+  foldersPanel,
+  adjustmentsPanel,
   sidebarScrim,
   themeToggleButton,
   recentFoldersList,
@@ -48,17 +53,44 @@ export function hideNotice() {
   appNotice.setAttribute("aria-hidden", "true");
 }
 
-export function openSidebar() {
+export function openSidebar(panel = "folders") {
+  const nextPanel = panel === "adjustments" ? "adjustments" : "folders";
+  state.activeSidebarPanel = nextPanel;
   document.body.classList.add("has-open-sidebar");
   recentSidebar.setAttribute("aria-hidden", "false");
-  menuButton.setAttribute("aria-expanded", "true");
+  sidebarTitle.textContent = nextPanel === "adjustments" ? "Controles" : "Carpetas";
+  foldersPanel.classList.toggle("is-hidden", nextPanel !== "folders");
+  adjustmentsPanel.classList.toggle("is-hidden", nextPanel !== "adjustments");
+  menuButton.setAttribute("aria-expanded", String(nextPanel === "folders"));
+  adjustmentsButton.setAttribute("aria-expanded", String(nextPanel === "adjustments"));
+  fullscreenAdjustmentsButton.setAttribute("aria-expanded", String(nextPanel === "adjustments"));
+  menuButton.setAttribute("aria-pressed", String(nextPanel === "folders"));
+  adjustmentsButton.setAttribute("aria-pressed", String(nextPanel === "adjustments"));
+  fullscreenAdjustmentsButton.setAttribute("aria-pressed", String(nextPanel === "adjustments"));
   sidebarScrim.hidden = false;
+}
+
+export function toggleSidebar(panel = "folders") {
+  const nextPanel = panel === "adjustments" ? "adjustments" : "folders";
+  const isOpen = document.body.classList.contains("has-open-sidebar");
+
+  if (isOpen && state.activeSidebarPanel === nextPanel) {
+    closeSidebar();
+    return;
+  }
+
+  openSidebar(nextPanel);
 }
 
 export function closeSidebar() {
   document.body.classList.remove("has-open-sidebar");
   recentSidebar.setAttribute("aria-hidden", "true");
   menuButton.setAttribute("aria-expanded", "false");
+  adjustmentsButton.setAttribute("aria-expanded", "false");
+  fullscreenAdjustmentsButton.setAttribute("aria-expanded", "false");
+  menuButton.setAttribute("aria-pressed", "false");
+  adjustmentsButton.setAttribute("aria-pressed", "false");
+  fullscreenAdjustmentsButton.setAttribute("aria-pressed", "false");
   sidebarScrim.hidden = true;
 }
 

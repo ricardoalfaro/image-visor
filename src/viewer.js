@@ -22,6 +22,7 @@ import {
 } from "./dom.js";
 import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-pan.js";
 import { getFavoriteKey, isFavorite } from "./favorites.js";
+import { applyImageAdjustments, renderImageAdjustmentControls, resetImageAdjustments } from "./image-adjustments.js";
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
@@ -204,10 +205,12 @@ export async function renderActiveImage() {
     clearActiveObjectUrl();
     activeImage.removeAttribute("src");
     activeImage.alt = "";
+    activeImage.style.filter = "";
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
     activePosition.textContent = "";
+    resetImageAdjustments();
     return;
   }
 
@@ -219,22 +222,27 @@ export async function renderActiveImage() {
   if (isVideo) {
     activeImage.removeAttribute("src");
     activeImage.alt = "";
+    activeImage.style.filter = "";
+    resetImageAdjustments();
     activeVideo.autoplay = true;
     activeVideo.loop = false;
     activeVideo.src = mediaUrl;
     activeVideo.load();
     playActiveVideo();
   } else {
+    resetImageAdjustments();
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
     activeImage.src = mediaUrl;
     activeImage.alt = image.name;
+    applyImageAdjustments();
   }
 
   activePosition.textContent = getPositionText();
   resetFullscreenZoom();
   updateFrameOrientation();
+  renderImageAdjustmentControls();
 
   nextButton.disabled = !canMoveNext();
 }

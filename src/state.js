@@ -14,6 +14,12 @@ export const state = {
   slideshowTimer: 0,
   panX: 0,
   panY: 0,
+  imageAdjustments: {
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+  },
+  activeSidebarPanel: "folders",
   dragState: null,
   fullscreenPan: null,
   fullscreenSelection: null,

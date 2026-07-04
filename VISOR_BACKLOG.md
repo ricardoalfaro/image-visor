@@ -32,6 +32,7 @@ El proyecto separado del editor puede servir como referencia o cantera de codigo
 - [ ] Definir lista inicial de mejoras deseadas para el visor.
 - [ ] Evaluar que piezas de `continue-on-develop` se pueden reciclar.
 - [ ] Priorizar primeras tareas.
+- [x] Implementar primera mejora: controles basicos temporales de imagen.
 
 ## Ideas Candidatas
 
@@ -39,7 +40,7 @@ Estas ideas estan pendientes de definir. Se iran moviendo a secciones concretas 
 
 - [ ] Pendiente: usuario definira que funciones del editor quiere traer al visor.
 - [ ] Rediseño completo de la interfaz: pendiente de referencias y definicion precisa de alcance. El foco inicial seran los paneles y otras areas que se definiran cuando se aborde la tarea.
-- [ ] Controles basicos temporales de imagen: habilitar ajustes como brillo, contraste u otros parametros simples mientras se visualiza una imagen. No deben persistir ni modificar archivos; son solo una ayuda momentanea durante la revision.
+- [x] Controles basicos temporales de imagen: habilitar ajustes como brillo, contraste u otros parametros simples mientras se visualiza una imagen. No deben persistir ni modificar archivos; son solo una ayuda momentanea durante la revision.
 - [ ] Eliminacion on demand de imagenes: permitir borrar imagenes mientras se revisan en el visor. Debe incluir confirmacion para evitar accidentes y definir claramente si aplica solo a archivos locales con permisos suficientes o tambien a flujos servidos por el backend local.
 - [ ] Lectura de archivos desde Google Drive: explorar capacidad para abrir imagenes y videos alojados en Google Drive. Pendiente definir autenticacion, permisos, seleccion de carpetas/archivos, cache local y diferencias frente al flujo local-first actual.
 - [ ] Grupos de carpetas en el panel: permitir organizar carpetas dentro del sidebar/panel mediante grupos. Pendiente definir si los grupos seran manuales, automaticos, por origen, por proyecto u otra logica.

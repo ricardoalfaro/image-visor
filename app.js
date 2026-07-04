@@ -1,11 +1,12 @@
 import { state } from "./src/state.js";
 import {
-  folderInput, serverButton, previousButton, nextButton, fullscreenButton,
+  folderInput, previousButton, nextButton, fullscreenButton,
   playButton, stopButton, shuffleButton, zoomOutButton, zoomInButton,
   resetZoomButton, themeToggleButton, closeViewerButton, menuButton,
   closeSidebarButton, sidebarScrim, clearRecentFoldersButton, imageViewport,
   controls, activeImage, activeVideo, photoFrame, folderNav, sortSelect,
-  sidebarImportButton, favoriteButton
+  sidebarImportButton, favoriteButton, adjustmentsButton, fullscreenAdjustmentsButton,
+  adjustmentInputs, resetAdjustmentsButton
 } from "./src/dom.js";
 import {
   handleBrowserFolderIntent, handleFolderSelection, loadLocalFolder, closeViewer
@@ -19,11 +20,16 @@ import {
   setZoom, startImageDrag, dragImage, endImageDrag, resetFullscreenZoom
 } from "./src/zoom-pan.js";
 import {
-  cycleThemePreference, openSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites
+  cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites
 } from "./src/ui.js";
 import { loadRecentFolders, clearRecentFolders } from "./src/storage.js";
 import { loadFavorites, toggleFavorite } from "./src/favorites.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
+import {
+  renderImageAdjustmentControls,
+  resetImageAdjustments,
+  updateImageAdjustment
+} from "./src/image-adjustments.js";
 
 let favoriteControlTimer = 0;
 
@@ -54,8 +60,7 @@ function initializeOnboarding() {
     localStorage.setItem(HOME_CTA_SEEN_KEY, "true");
   } catch (error) {}
 
-  serverButton.classList.toggle("is-hidden", hasSeenHomeCta);
-  window.setTimeout(openSidebar, hasSeenHomeCta ? 350 : 2600);
+  window.setTimeout(() => openSidebar("folders"), hasSeenHomeCta ? 350 : 2600);
 }
 
 function handleViewerOutsideClick(event) {
@@ -164,7 +169,7 @@ function canOpenFolderFromKeyboard(event) {
     return false;
   }
 
-  if (document.body.classList.contains("has-open-sidebar") || serverButton.disabled) {
+  if (document.body.classList.contains("has-open-sidebar") || sidebarImportButton.disabled) {
     return false;
   }
 
@@ -178,7 +183,6 @@ function canOpenFolderFromKeyboard(event) {
 
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
-serverButton.addEventListener("click", loadLocalFolder);
 sidebarImportButton.addEventListener("click", () => {
   closeSidebar();
   loadLocalFolder();
@@ -207,10 +211,29 @@ zoomInButton.addEventListener("click", () => setZoom(state.zoom + 10));
 resetZoomButton.addEventListener("click", () => setZoom(100));
 themeToggleButton.addEventListener("click", cycleThemePreference);
 closeViewerButton.addEventListener("click", closeViewer);
-menuButton.addEventListener("click", openSidebar);
+menuButton.addEventListener("click", () => toggleSidebar("folders"));
+adjustmentsButton.addEventListener("click", () => {
+  toggleSidebar("adjustments");
+  renderImageAdjustmentControls();
+});
+fullscreenAdjustmentsButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleSidebar("adjustments");
+  renderImageAdjustmentControls();
+  revealFullscreenFavorite();
+});
+fullscreenAdjustmentsButton.addEventListener("pointerdown", (event) => {
+  event.stopPropagation();
+});
 closeSidebarButton.addEventListener("click", closeSidebar);
 sidebarScrim.addEventListener("click", closeSidebar);
 clearRecentFoldersButton.addEventListener("click", clearRecentFolders);
+resetAdjustmentsButton.addEventListener("click", resetImageAdjustments);
+adjustmentInputs.forEach((input) => {
+  input.addEventListener("input", () => {
+    updateImageAdjustment(input.dataset.imageAdjustment, input.value);
+  });
+});
 imageViewport.addEventListener("pointerdown", startImageDrag);
 imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointermove", revealFullscreenFavorite);
@@ -237,4 +260,5 @@ await loadRecentFolders();
 await loadFavorites();
 renderRecentFolders();
 renderFavorites();
+renderImageAdjustmentControls();
 initializeOnboarding();

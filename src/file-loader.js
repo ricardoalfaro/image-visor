@@ -2,7 +2,7 @@ import { BROWSER_PICKER_WARNING, LOCAL_FOLDER_PICKER_ENDPOINT } from "./constant
 import { state, clearActiveObjectUrl, clearFolderThumbnailObjectUrls } from "./state.js";
 import { 
   folderInput,
-  serverButton,
+  sidebarImportButton,
 } from "./dom.js";
 import { showNotice, hideNotice, closeSidebar, renderFavorites } from "./ui.js";
 import { getLocalRelativePath, getBrowserSelectedFolderName, getFolderPath, getTopLevelFolder, isSupportedMedia, getMediaType, createRecentFolderToken } from "./utils.js";
@@ -49,7 +49,7 @@ export async function handleFolderSelection(event) {
 
 export async function loadLocalFolder() {
   hideNotice();
-  serverButton.disabled = true;
+  sidebarImportButton.disabled = true;
 
   try {
     if (isLocalServerHost() && await loadFolderFromLocalServer()) {
@@ -69,7 +69,7 @@ export async function loadLocalFolder() {
     showNotice(BROWSER_PICKER_WARNING, "warning");
     folderInput.click();
   } finally {
-    serverButton.disabled = false;
+    sidebarImportButton.disabled = false;
   }
 }
 

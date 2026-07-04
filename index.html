@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Image Viewer Pro</title>
+    <link rel="icon" href="data:,">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -16,11 +17,16 @@
         <i id="appNoticeIcon" class="fa-solid fa-circle-info" aria-hidden="true"></i>
         <span id="appNoticeText"></span>
       </div>
+      <nav class="app-rail" aria-label="Paneles">
+        <button id="menuButton" class="icon-button rail-button" type="button" aria-label="Abrir carpetas" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false" title="Carpetas">
+          <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+        </button>
+        <button id="adjustmentsButton" class="icon-button rail-button" type="button" aria-label="Abrir controles de imagen" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false" title="Controles">
+          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        </button>
+      </nav>
       <section class="viewer-layout" aria-label="Visualizador de imágenes">
         <div class="top-actions">
-          <button id="menuButton" class="icon-button menu-button" type="button" aria-label="Abrir menu" aria-controls="recentSidebar" aria-expanded="false">
-            <i class="fa-solid fa-bars" aria-hidden="true"></i>
-          </button>
           <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático">
             <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg>
             <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
@@ -43,9 +49,6 @@
                 <rect class="welcome-frame-line" x="4" y="4" width="752" height="552" rx="32"></rect>
               </svg>
               <h1><span>Image</span><span>Viewer Pro</span></h1>
-              <div class="welcome-actions">
-                <button id="serverButton" class="button primary welcome-button" type="button">Importar una carpeta</button>
-              </div>
             </div>
           </div>
         </div>
@@ -67,6 +70,9 @@
                 <span id="activePosition" class="overlay-text overlay-right"></span>
               </div>
               <div id="zoomSelection" class="zoom-selection is-hidden" aria-hidden="true"></div>
+              <button id="fullscreenAdjustmentsButton" class="icon-button fullscreen-adjustments-button" type="button" aria-label="Abrir controles de imagen" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false">
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+              </button>
               <div class="controls" aria-label="Controles del visualizador">
                 <div class="control-group control-group-primary">
                   <button id="favoriteButton" class="icon-button favorite-button" type="button" disabled aria-label="Agregar a favoritos" aria-pressed="false">
@@ -111,43 +117,70 @@
       <div id="sidebarScrim" class="sidebar-scrim" hidden></div>
       <aside id="recentSidebar" class="recent-sidebar" aria-label="Menu lateral" aria-hidden="true">
         <div class="sidebar-header">
-          <h2>Image Viewer Pro</h2>
+          <h2 id="sidebarTitle">Carpetas</h2>
           <button id="closeSidebarButton" class="icon-button" type="button" aria-label="Cerrar menu">
             <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
-        <section class="sort-section" aria-label="Ordenamiento">
-          <div class="sort-control">
-            <label for="sortSelect">Ordenar por</label>
-            <div class="select-wrapper">
-              <select id="sortSelect">
-                <option value="name">Nombre</option>
-                <option value="dateDesc">Más recientes primero</option>
-                <option value="dateAsc">Más antiguas primero</option>
-              </select>
-              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        <div id="foldersPanel" class="sidebar-panel" data-sidebar-panel="folders">
+          <section class="sort-section" aria-label="Ordenamiento">
+            <div class="sort-control">
+              <label for="sortSelect">Ordenar por</label>
+              <div class="select-wrapper">
+                <select id="sortSelect">
+                  <option value="name">Nombre</option>
+                  <option value="dateDesc">Más recientes primero</option>
+                  <option value="dateAsc">Más antiguas primero</option>
+                </select>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+              </div>
             </div>
-          </div>
-        </section>
-        <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
-          <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
-            <i class="fa-solid fa-folder" aria-hidden="true"></i>
-            <span id="favoritePhotosTitle">Favoritos</span>
-            <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
-          </button>
-        </section>
-        <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
-          <div class="recent-section-header">
-            <h3 id="recentFoldersTitle">Carpetas</h3>
-            <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
-              <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+          </section>
+          <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
+            <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
+              <i class="fa-solid fa-folder" aria-hidden="true"></i>
+              <span id="favoritePhotosTitle">Favoritos</span>
+              <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
             </button>
+          </section>
+          <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
+            <div class="recent-section-header">
+              <h3 id="recentFoldersTitle">Carpetas</h3>
+              <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+              </button>
+            </div>
+            <ol id="recentFoldersList" class="recent-list"></ol>
+            <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
+          </section>
+          <div class="sidebar-footer">
+            <button id="sidebarImportButton" class="button primary welcome-button" style="width: 100%;">Importar una carpeta</button>
           </div>
-          <ol id="recentFoldersList" class="recent-list"></ol>
-          <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
-        </section>
-        <div class="sidebar-footer">
-          <button id="sidebarImportButton" class="button primary welcome-button" style="width: 100%;">Importar una carpeta</button>
+        </div>
+        <div id="adjustmentsPanel" class="sidebar-panel is-hidden" data-sidebar-panel="adjustments">
+          <section class="adjustments-section" aria-label="Ajustes temporales de imagen">
+            <p id="adjustmentsEmptyState" class="adjustments-empty">Selecciona una imagen para ajustar su vista.</p>
+            <div class="adjustment-list">
+              <label class="adjustment-control">
+                <span>Brillo</span>
+                <input type="range" min="50" max="150" value="100" step="1" data-image-adjustment="brightness">
+                <output data-adjustment-output="brightness">100%</output>
+              </label>
+              <label class="adjustment-control">
+                <span>Contraste</span>
+                <input type="range" min="50" max="180" value="100" step="1" data-image-adjustment="contrast">
+                <output data-adjustment-output="contrast">100%</output>
+              </label>
+              <label class="adjustment-control">
+                <span>Saturación</span>
+                <input type="range" min="0" max="200" value="100" step="1" data-image-adjustment="saturate">
+                <output data-adjustment-output="saturate">100%</output>
+              </label>
+            </div>
+          </section>
+          <div class="sidebar-footer">
+            <button id="resetAdjustmentsButton" class="button" type="button" style="width: 100%;">Restablecer ajustes</button>
+          </div>
         </div>
       </aside>
     </main>
