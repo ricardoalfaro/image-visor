@@ -9,12 +9,12 @@ import {
   adjustmentInputs, resetAdjustmentsButton
 } from "./src/dom.js";
 import {
-  handleBrowserFolderIntent, handleFolderSelection, loadLocalFolder, closeViewer
+  handleBrowserFolderIntent, handleFolderSelection, loadLocalFolder, closeViewer, openRecentFolder
 } from "./src/file-loader.js";
 import {
   showPrevious, showNext, toggleFullscreen, startSlideshow, stopSlideshowAndRender,
   toggleShuffle, handleImageDoubleClick, updateFullscreenButton, updateFrameOrientation,
-  handleVideoEnded, isActiveVideo, applyFolderFilter, updateFavoriteButton, renderActiveImage
+  handleVideoEnded, isActiveVideo, applyFolderFilter, updateFavoriteButton, renderActiveImage, renderFolderNav
 } from "./src/viewer.js";
 import {
   setZoom, startImageDrag, dragImage, endImageDrag, resetFullscreenZoom
@@ -183,6 +183,10 @@ function canOpenFolderFromKeyboard(event) {
 
 folderInput.addEventListener("click", handleBrowserFolderIntent);
 folderInput.addEventListener("change", handleFolderSelection);
+window.addEventListener("image-visor:recent-folders-updated", renderFolderNav);
+window.addEventListener("image-visor:open-recent-folder", (event) => {
+  openRecentFolder(event.detail?.folderId);
+});
 sidebarImportButton.addEventListener("click", () => {
   closeSidebar();
   loadLocalFolder();

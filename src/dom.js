@@ -41,6 +41,7 @@ export const sidebarImportButton = document.querySelector("#sidebarImportButton"
 export const favoritePhotosCount = document.querySelector("#favoritePhotosCount");
 export const favoriteFolderButton = document.querySelector("#favoriteFolderButton");
 export const adjustmentInputs = Array.from(document.querySelectorAll("[data-image-adjustment]"));
+export const sharpenKernel = document.querySelector("#sharpenKernel");
 export const adjustmentOutputs = Array.from(document.querySelectorAll("[data-adjustment-output]"));
 export const resetAdjustmentsButton = document.querySelector("#resetAdjustmentsButton");
 export const adjustmentsEmptyState = document.querySelector("#adjustmentsEmptyState");

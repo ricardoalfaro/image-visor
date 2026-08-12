@@ -176,6 +176,21 @@
                 <input type="range" min="0" max="200" value="100" step="1" data-image-adjustment="saturate">
                 <output data-adjustment-output="saturate">100%</output>
               </label>
+              <label class="adjustment-control">
+                <span>Tono</span>
+                <input type="range" min="-180" max="180" value="0" step="1" data-image-adjustment="hue">
+                <output data-adjustment-output="hue" data-adjustment-unit="°">0°</output>
+              </label>
+              <label class="adjustment-control">
+                <span>Exposición</span>
+                <input type="range" min="-2" max="2" value="0" step="0.1" data-image-adjustment="exposure">
+                <output data-adjustment-output="exposure" data-adjustment-unit="EV">0.0 EV</output>
+              </label>
+              <label class="adjustment-control">
+                <span>Enfoque</span>
+                <input type="range" min="0" max="100" value="0" step="1" data-image-adjustment="sharpen">
+                <output data-adjustment-output="sharpen">0%</output>
+              </label>
             </div>
           </section>
           <div class="sidebar-footer">
@@ -184,6 +199,12 @@
         </div>
       </aside>
     </main>
+
+    <svg width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="sharpenFilter" color-interpolation-filters="sRGB">
+        <feConvolveMatrix id="sharpenKernel" order="3" preserveAlpha="true" edgeMode="duplicate" kernelMatrix="0 0 0 0 1 0 0 0 0"></feConvolveMatrix>
+      </filter>
+    </svg>
 
     <script type="module" src="app.js"></script>
   </body>

@@ -30,7 +30,7 @@ export async function handleFolderSelection(event) {
   }));
   const folderName = getBrowserSelectedFolderName(selectedFiles) || "Carpeta local";
   const recentFolderId = `browser:${folderName}`;
-  await loadLocalFiles(files, folderName);
+  await loadLocalFiles(files, folderName, recentFolderId);
   state.recentFolderFiles.set(recentFolderId, { files, name: folderName });
   const isPersisted = await storeBrowserFolderFiles(recentFolderId, files, folderName);
   await rememberRecentFolder({
@@ -114,7 +114,7 @@ async function loadFolderFromDirectoryPicker() {
     const directoryHandle = await window.showDirectoryPicker({ mode: "read" });
     const files = await collectDirectoryFiles(directoryHandle);
     const recentFolderId = await getRecentDirectoryFolderId(directoryHandle);
-    await loadLocalFiles(files, directoryHandle.name || "Carpeta local");
+    await loadLocalFiles(files, directoryHandle.name || "Carpeta local", recentFolderId);
     await rememberRecentFolder({
       id: recentFolderId,
       name: directoryHandle.name || "Carpeta local",
@@ -143,7 +143,7 @@ export async function openRecentFolder(folderId) {
     const cachedFolder = state.recentFolderFiles.get(recentFolder.id);
     closeSidebar();
     hideNotice();
-    await loadLocalFiles(cachedFolder.files, cachedFolder.name || recentFolder.name);
+    await loadLocalFiles(cachedFolder.files, cachedFolder.name || recentFolder.name, recentFolder.id);
     await rememberRecentFolder(recentFolder);
     return;
   }
@@ -155,7 +155,7 @@ export async function openRecentFolder(folderId) {
       closeSidebar();
       hideNotice();
       state.recentFolderFiles.set(recentFolder.id, storedFolder);
-      await loadLocalFiles(storedFolder.files, storedFolder.name || recentFolder.name);
+      await loadLocalFiles(storedFolder.files, storedFolder.name || recentFolder.name, recentFolder.id);
       await rememberRecentFolder(recentFolder);
       return;
     }
@@ -201,7 +201,7 @@ export async function openRecentFolder(folderId) {
     closeSidebar();
     hideNotice();
     const files = await collectDirectoryFiles(directoryHandle);
-    await loadLocalFiles(files, directoryHandle.name || recentFolder.name);
+    await loadLocalFiles(files, directoryHandle.name || recentFolder.name, recentFolder.id);
     await rememberRecentFolder({
       ...recentFolder,
       name: directoryHandle.name || recentFolder.name,
@@ -248,7 +248,7 @@ export async function refreshRecentFolder(folderId) {
       }
 
       const files = await collectDirectoryFiles(directoryHandle);
-      await loadLocalFiles(files, directoryHandle.name || recentFolder.name);
+      await loadLocalFiles(files, directoryHandle.name || recentFolder.name, recentFolder.id);
       await rememberRecentFolder({
         ...recentFolder,
         name: directoryHandle.name || recentFolder.name,
@@ -287,9 +287,10 @@ async function loadServerFolder(folder) {
     groupFolder: getTopLevelFolder(item.path),
   }));
 
-  await loadMediaItems(media, folder.name || "Carpeta local");
+  const recentFolderId = `server:${folder.path}`;
+  await loadMediaItems(media, folder.name || "Carpeta local", recentFolderId);
   await rememberRecentFolder({
-    id: `server:${folder.path}`,
+    id: recentFolderId,
     name: folder.name || "Carpeta local",
     path: folder.path,
     canReopen: true,
@@ -325,7 +326,7 @@ async function collectDirectoryFiles(directoryHandle, parentPath = "") {
   return files;
 }
 
-async function loadLocalFiles(files, label) {
+async function loadLocalFiles(files, label, recentFolderId = "") {
   const media = files
     .filter((item) => isSupportedMedia(item.file))
     .map((item) => {
@@ -340,16 +341,23 @@ async function loadLocalFiles(files, label) {
       };
     });
 
-  await loadMediaItems(media, label);
+  await loadMediaItems(media, label, recentFolderId);
 }
 
 import { getFoldersFromMedia } from "./utils.js";
 import { applyFolderFilter } from "./viewer.js";
 
-async function loadMediaItems(media, label) {
+async function loadMediaItems(media, label, recentFolderId = "") {
   clearActiveObjectUrl();
   clearFolderThumbnailObjectUrls();
   state.sourceLabel = label || "Carpeta local";
+  state.activeRecentFolderId = recentFolderId;
+  if (recentFolderId) {
+    const preview = media.find((item) => item.type === "image");
+    if (preview) {
+      state.recentFolderPreviews.set(recentFolderId, preview);
+    }
+  }
   stopSlideshow();
 
   state.allMedia = media;
@@ -371,6 +379,7 @@ export async function closeViewer() {
   clearFolderThumbnailObjectUrls();
   resetFullscreenZoom();
   state.sourceLabel = "Carpeta local";
+  state.activeRecentFolderId = "";
   state.images = [];
   state.allMedia = [];
   state.folders = [];

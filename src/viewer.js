@@ -72,9 +72,10 @@ export async function selectFolder(path) {
   await renderActiveImage();
 }
 
-function renderFolderNav() {
+export function renderFolderNav() {
   const favoriteCount = getAvailableFavorites().length;
-  const hasFolders = state.folders.length > 0 || favoriteCount > 0;
+  const hasImportedFolders = state.recentFolders.length > 1;
+  const hasFolders = state.folders.length > 0 || favoriteCount > 0 || hasImportedFolders;
   clearFolderThumbnailObjectUrls();
   folderNav.classList.toggle("is-hidden", !hasFolders);
   folderNav.innerHTML = "";
@@ -110,6 +111,37 @@ function renderFolderNav() {
       thumbnailUrl: getFolderPreviewUrl(folder.path),
     }));
   });
+
+  state.recentFolders
+    .filter((folder) => folder.id !== state.activeRecentFolderId)
+    .forEach((folder) => {
+      folderNav.append(createRecentFolderButton(folder));
+    });
+}
+
+function createRecentFolderButton(folder) {
+  const title = `Abrir ${folder.name}${Number.isInteger(folder.mediaCount) ? ` (${folder.mediaCount})` : ""}`;
+  const preview = state.recentFolderPreviews.get(folder.id);
+  const thumbnailUrl = preview ? getMediaPreviewUrl(preview) : "";
+  const button = document.createElement("button");
+
+  button.className = "folder-button imported-folder-button";
+  button.type = "button";
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.setAttribute("aria-pressed", "false");
+  button.dataset.folderId = folder.id;
+  button.classList.toggle("is-placeholder", !thumbnailUrl);
+  if (thumbnailUrl) {
+    button.style.backgroundImage = `url("${thumbnailUrl}")`;
+  } else {
+    button.style.backgroundColor = getFolderFallbackColor(folder.id);
+  }
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.dispatchEvent(new CustomEvent("image-visor:open-recent-folder", { detail: { folderId: folder.id } }));
+  });
+  return button;
 }
 
 function createFolderButton({ title, isActive, path, thumbnailUrl }) {
@@ -122,9 +154,23 @@ function createFolderButton({ title, isActive, path, thumbnailUrl }) {
   button.classList.toggle("is-active", isActive);
   if (thumbnailUrl) {
     button.style.backgroundImage = `url("${thumbnailUrl}")`;
+  } else {
+    button.classList.add("is-placeholder");
+    button.style.backgroundColor = getFolderFallbackColor(path || title);
   }
   button.addEventListener("click", () => selectFolder(path));
   return button;
+}
+
+function getFolderFallbackColor(seed) {
+  let hash = 0;
+
+  for (const character of seed) {
+    hash = ((hash << 5) - hash) + character.charCodeAt(0);
+    hash |= 0;
+  }
+
+  return `hsl(${Math.abs(hash) % 360} 52% 58%)`;
 }
 
 function getFolderPreviewUrl(folderPath) {
@@ -138,9 +184,10 @@ function getFolderPreviewUrl(folderPath) {
       return folderPath ? item.groupFolder === folderPath : true;
     });
 
-  if (!preview) {
-    return "";
-  }
+  return preview ? getMediaPreviewUrl(preview) : "";
+}
+
+function getMediaPreviewUrl(preview) {
 
   if (preview.url) {
     return preview.url;

@@ -588,8 +588,8 @@ button {
 }
 
 .folder-button {
-  width: 18px;
-  height: 18px;
+  width: 18.9px;
+  height: 18.9px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -606,14 +606,25 @@ button {
 }
 
 .folder-button:hover {
-  width: 65px;
-  height: 65px;
+  width: 68.25px;
+  height: 68.25px;
   border-radius: 3rem;
-  transform: translateX(-23.5px);
+  transform: translateX(-24.675px);
 }
 
 .folder-button.is-active {
   opacity: 0.58;
+}
+
+.imported-folder-button.is-placeholder {
+  color: var(--text);
+}
+
+.imported-folder-button.is-placeholder::after {
+  content: "\f07b";
+  font-family: "Font Awesome 6 Free";
+  font-size: 0.62rem;
+  font-weight: 900;
 }
 
 .bottom-bar {

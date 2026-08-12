@@ -55,6 +55,7 @@ export async function rememberRecentFolder(folder) {
   
   saveRecentFolders();
   renderRecentFolders();
+  window.dispatchEvent(new Event("image-visor:recent-folders-updated"));
 
   if (folder.handle) {
     await storeDirectoryHandle(nextFolder.id, folder.handle);
@@ -84,6 +85,7 @@ export async function removeRecentFolder(folderId) {
   saveRecentFolders();
   await removeStoredBrowserFolder(folderId);
   renderRecentFolders();
+  window.dispatchEvent(new Event("image-visor:recent-folders-updated"));
 }
 
 export async function markRecentFolderNotReopenable(folderId) {
@@ -104,6 +106,7 @@ export async function clearRecentFolders() {
   localStorage.removeItem(RECENT_FOLDERS_KEY);
   await clearStoredBrowserFolders();
   renderRecentFolders();
+  window.dispatchEvent(new Event("image-visor:recent-folders-updated"));
 }
 
 export async function openRecentDatabase() {

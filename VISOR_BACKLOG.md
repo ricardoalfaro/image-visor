@@ -33,6 +33,7 @@ El proyecto separado del editor puede servir como referencia o cantera de codigo
 - [ ] Evaluar que piezas de `continue-on-develop` se pueden reciclar.
 - [ ] Priorizar primeras tareas.
 - [x] Implementar primera mejora: controles basicos temporales de imagen.
+- [x] Navegacion rapida entre carpetas importadas desde el dock de miniaturas.
 
 ## Ideas Candidatas
 
