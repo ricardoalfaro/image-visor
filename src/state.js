@@ -3,6 +3,8 @@ export const state = {
   allMedia: [],
   folders: [],
   activeFolderPath: "",
+  activeDirectoryHandle: null,
+  pendingDeleteMedia: null,
   sortBy: "name",
   activeIndex: -1,
   zoom: 100,
@@ -11,6 +13,7 @@ export const state = {
   recentFolderPreviews: new Map(),
   currentObjectUrl: "",
   folderThumbnailObjectUrls: [],
+  mediaThumbnailObjectUrls: [],
   isPlaying: false,
   shuffleEnabled: false,
   slideshowTimer: 0,
@@ -55,4 +58,11 @@ export function clearFolderThumbnailObjectUrls() {
     URL.revokeObjectURL(objectUrl);
   }
   state.folderThumbnailObjectUrls = [];
+}
+
+export function clearMediaThumbnailObjectUrls() {
+  for (const objectUrl of state.mediaThumbnailObjectUrls) {
+    URL.revokeObjectURL(objectUrl);
+  }
+  state.mediaThumbnailObjectUrls = [];
 }

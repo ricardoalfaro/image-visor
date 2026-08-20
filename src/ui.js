@@ -1,35 +1,45 @@
 import { NOTICE_AUTO_HIDE_MS, THEME_SEQUENCE } from "./constants.js";
 import { state } from "./state.js";
-import { 
-  appNotice, 
-  appNoticeIcon, 
+import {
+  appNotice,
+  appNoticeIcon,
   appNoticeText,
-  recentSidebar,
+  appSidebar,
+  sidebarToggleButton,
   menuButton,
   adjustmentsButton,
+  sortButton,
   fullscreenAdjustmentsButton,
   sidebarTitle,
   foldersPanel,
   adjustmentsPanel,
+  sortPanel,
   sidebarScrim,
   themeToggleButton,
   recentFoldersList,
   emptyRecentFolders,
   clearRecentFoldersButton,
   favoritePhotosCount,
-  favoriteFolderButton
+  favoriteFolderButton,
+  sortOptionButtons
 } from "./dom.js";
 import { openRecentFolder, refreshRecentFolder } from "./file-loader.js";
 import { removeRecentFolder } from "./storage.js";
 import { FAVORITES_FOLDER_PATH } from "./constants.js";
-import { getAvailableFavorites, selectFolder } from "./viewer.js";
+import { getAvailableFavorites, selectFolder, applyFolderFilter } from "./viewer.js";
+
+const SIDEBAR_PANELS = {
+  folders: { element: foldersPanel, trigger: menuButton, title: "Carpetas" },
+  adjustments: { element: adjustmentsPanel, trigger: adjustmentsButton, title: "Controles" },
+  sort: { element: sortPanel, trigger: sortButton, title: "Ordenar por" },
+};
 
 export function showNotice(message, type = "info") {
   const noticeType = ["info", "warning", "error"].includes(type) ? type : "info";
   const icons = {
-    info: "fa-circle-info",
-    warning: "fa-triangle-exclamation",
-    error: "fa-circle-exclamation",
+    info: "iconoir-info-circle",
+    warning: "iconoir-warning-triangle",
+    error: "iconoir-warning-circle",
   };
 
   window.clearTimeout(state.noticeTimer);
@@ -39,7 +49,7 @@ export function showNotice(message, type = "info") {
   appNotice.setAttribute("aria-hidden", "false");
   appNotice.setAttribute("role", noticeType === "error" ? "alert" : "status");
   appNoticeText.textContent = message;
-  appNoticeIcon.className = `fa-solid ${icons[noticeType]}`;
+  appNoticeIcon.className = icons[noticeType];
 
   if (noticeType !== "error") {
     state.noticeTimer = window.setTimeout(hideNotice, NOTICE_AUTO_HIDE_MS);
@@ -54,24 +64,37 @@ export function hideNotice() {
 }
 
 export function openSidebar(panel = "folders") {
-  const nextPanel = panel === "adjustments" ? "adjustments" : "folders";
+  const nextPanel = SIDEBAR_PANELS[panel] ? panel : "folders";
+
+  if (nextPanel === "adjustments" && !state.images.length) {
+    showNotice("Abre una carpeta para usar los controles de imagen.", "warning");
+    return;
+  }
+
   state.activeSidebarPanel = nextPanel;
   document.body.classList.add("has-open-sidebar");
-  recentSidebar.setAttribute("aria-hidden", "false");
-  sidebarTitle.textContent = nextPanel === "adjustments" ? "Controles" : "Carpetas";
-  foldersPanel.classList.toggle("is-hidden", nextPanel !== "folders");
-  adjustmentsPanel.classList.toggle("is-hidden", nextPanel !== "adjustments");
-  menuButton.setAttribute("aria-expanded", String(nextPanel === "folders"));
-  adjustmentsButton.setAttribute("aria-expanded", String(nextPanel === "adjustments"));
+  appSidebar.setAttribute("aria-hidden", "false");
+  sidebarTitle.textContent = SIDEBAR_PANELS[nextPanel].title;
+
+  Object.entries(SIDEBAR_PANELS).forEach(([key, { element, trigger }]) => {
+    const isActive = key === nextPanel;
+    element.classList.toggle("is-hidden", !isActive);
+    trigger.setAttribute("aria-expanded", String(isActive));
+    trigger.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (nextPanel === "sort") {
+    renderSortOptions();
+  }
+
   fullscreenAdjustmentsButton.setAttribute("aria-expanded", String(nextPanel === "adjustments"));
-  menuButton.setAttribute("aria-pressed", String(nextPanel === "folders"));
-  adjustmentsButton.setAttribute("aria-pressed", String(nextPanel === "adjustments"));
   fullscreenAdjustmentsButton.setAttribute("aria-pressed", String(nextPanel === "adjustments"));
+  sidebarToggleButton.setAttribute("aria-expanded", "true");
   sidebarScrim.hidden = false;
 }
 
 export function toggleSidebar(panel = "folders") {
-  const nextPanel = panel === "adjustments" ? "adjustments" : "folders";
+  const nextPanel = SIDEBAR_PANELS[panel] ? panel : "folders";
   const isOpen = document.body.classList.contains("has-open-sidebar");
 
   if (isOpen && state.activeSidebarPanel === nextPanel) {
@@ -84,15 +107,32 @@ export function toggleSidebar(panel = "folders") {
 
 export function closeSidebar() {
   document.body.classList.remove("has-open-sidebar");
-  recentSidebar.setAttribute("aria-hidden", "true");
-  menuButton.setAttribute("aria-expanded", "false");
-  adjustmentsButton.setAttribute("aria-expanded", "false");
+  appSidebar.setAttribute("aria-hidden", "true");
+
+  Object.values(SIDEBAR_PANELS).forEach(({ trigger }) => {
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-pressed", "false");
+  });
+
   fullscreenAdjustmentsButton.setAttribute("aria-expanded", "false");
-  menuButton.setAttribute("aria-pressed", "false");
-  adjustmentsButton.setAttribute("aria-pressed", "false");
   fullscreenAdjustmentsButton.setAttribute("aria-pressed", "false");
+  sidebarToggleButton.setAttribute("aria-expanded", "false");
   sidebarScrim.hidden = true;
 }
+
+export function renderSortOptions() {
+  sortOptionButtons.forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.sortValue === state.sortBy));
+  });
+}
+
+sortOptionButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.sortBy = button.dataset.sortValue;
+    renderSortOptions();
+    applyFolderFilter({ keepIndex: true });
+  });
+});
 
 export function setThemePreference(theme, options = {}) {
   const nextTheme = ["light", "dark", "auto"].includes(theme) ? theme : "auto";
@@ -142,7 +182,7 @@ export function renderRecentFolders() {
     button.type = "button";
     button.title = `${folder.name}, ${getFolderPhotoCountLabel(folder)}`;
     button.setAttribute("aria-label", button.title);
-    icon.className = "fa-solid fa-folder";
+    icon.className = "iconoir-folder";
     icon.setAttribute("aria-hidden", "true");
     label.className = "recent-folder-name";
     label.textContent = folder.name;
@@ -153,13 +193,13 @@ export function renderRecentFolders() {
     refreshButton.type = "button";
     refreshButton.title = `Actualizar ${folder.name}`;
     refreshButton.setAttribute("aria-label", `Actualizar ${folder.name}`);
-    refreshIcon.className = "fa-solid fa-rotate-right";
+    refreshIcon.className = "iconoir-refresh";
     refreshIcon.setAttribute("aria-hidden", "true");
     removeButton.className = "remove-recent-button";
     removeButton.type = "button";
     removeButton.title = `Quitar ${folder.name}`;
     removeButton.setAttribute("aria-label", `Quitar ${folder.name} de recientes`);
-    removeIcon.className = "fa-solid fa-xmark";
+    removeIcon.className = "iconoir-xmark";
     removeIcon.setAttribute("aria-hidden", "true");
 
     button.append(icon, label, count);

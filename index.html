@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es" data-theme="auto">
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,31 +8,39 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/iconoir-icons/iconoir@7.12.1/css/iconoir.css">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="app-shell">
       <div id="appNotice" class="app-notice" role="status" aria-live="polite" aria-hidden="true">
-        <i id="appNoticeIcon" class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        <i id="appNoticeIcon" class="iconoir-info-circle" aria-hidden="true"></i>
         <span id="appNoticeText"></span>
       </div>
-      <nav class="app-rail" aria-label="Paneles">
-        <button id="menuButton" class="icon-button rail-button" type="button" aria-label="Abrir carpetas" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false" title="Carpetas">
-          <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+      <header class="app-header">
+        <div class="app-brand">Image Viewer Pro</div>
+        <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
+          <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
         </button>
-        <button id="adjustmentsButton" class="icon-button rail-button" type="button" aria-label="Abrir controles de imagen" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false" title="Controles">
-          <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+      </header>
+      <nav class="app-rail" aria-label="Panel principal">
+        <button id="sidebarToggleButton" class="icon-button rail-button rail-toggle" type="button" aria-label="Desplegar panel" aria-expanded="false" title="Desplegar panel">
+          <i class="iconoir-sidebar-collapse" aria-hidden="true"></i>
+        </button>
+        <span class="rail-divider" aria-hidden="true"></span>
+        <button id="menuButton" class="icon-button rail-button" type="button" aria-label="Carpetas" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Carpetas">
+          <i class="iconoir-folder" aria-hidden="true"></i>
+        </button>
+        <button id="adjustmentsButton" class="icon-button rail-button" type="button" aria-label="Controles de imagen" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Controles">
+          <i class="iconoir-settings" aria-hidden="true"></i>
+        </button>
+        <button id="sortButton" class="icon-button rail-button" type="button" aria-label="Ordenar" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Ordenar">
+          <i class="iconoir-sort" aria-hidden="true"></i>
         </button>
       </nav>
       <section class="viewer-layout" aria-label="Visualizador de imágenes">
-        <div class="top-actions">
-          <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático">
-            <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg>
-            <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
-            <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
-          </button>
-        </div>
         <div class="welcome-copy">
           <div class="welcome-panel">
             <div class="welcome-title">
@@ -70,34 +78,37 @@
                 <span id="activePosition" class="overlay-text overlay-right"></span>
               </div>
               <div id="zoomSelection" class="zoom-selection is-hidden" aria-hidden="true"></div>
-              <button id="fullscreenAdjustmentsButton" class="icon-button fullscreen-adjustments-button" type="button" aria-label="Abrir controles de imagen" aria-controls="recentSidebar" aria-expanded="false" aria-pressed="false">
-                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+              <button id="fullscreenAdjustmentsButton" class="icon-button fullscreen-adjustments-button" type="button" aria-label="Abrir controles de imagen" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false">
+                <i class="iconoir-settings" aria-hidden="true"></i>
               </button>
               <div class="controls" aria-label="Controles del visualizador">
                 <div class="control-group control-group-primary">
                   <button id="favoriteButton" class="icon-button favorite-button" type="button" disabled aria-label="Agregar a favoritos" aria-pressed="false">
-                    <i class="fa-regular fa-star" aria-hidden="true"></i>
+                    <i class="iconoir-star" aria-hidden="true"></i>
+                  </button>
+                  <button id="deleteButton" class="icon-button delete-button" type="button" disabled aria-label="Eliminar archivo">
+                    <i class="iconoir-trash" aria-hidden="true"></i>
                   </button>
                   <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
-                    <i class="fa-solid fa-play" aria-hidden="true"></i>
+                    <i class="iconoir-play-solid" aria-hidden="true"></i>
                   </button>
                   <button id="stopButton" class="icon-button" type="button" disabled aria-label="Detener">
-                    <i class="fa-solid fa-stop" aria-hidden="true"></i>
+                    <i class="iconoir-square-solid" aria-hidden="true"></i>
                   </button>
                   <button id="shuffleButton" class="icon-button" type="button" disabled aria-label="Aleatorio" aria-pressed="false">
-                    <i class="fa-solid fa-shuffle" aria-hidden="true"></i>
+                    <i class="iconoir-shuffle" aria-hidden="true"></i>
                   </button>
                 </div>
                 <div class="control-group control-group-tools">
                   <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">
-                    <i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i>
+                    <i class="iconoir-zoom-out" aria-hidden="true"></i>
                   </button>
                   <button id="resetZoomButton" class="button zoom-value" type="button" disabled>100%</button>
                   <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">
-                    <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
+                    <i class="iconoir-zoom-in" aria-hidden="true"></i>
                   </button>
                   <button id="fullscreenButton" class="icon-button" type="button" disabled aria-label="Pantalla completa">
-                    <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                    <i class="iconoir-expand" aria-hidden="true"></i>
                   </button>
                 </div>
               </div>
@@ -105,6 +116,7 @@
           </figure>
 
           <nav id="folderNav" class="folder-nav is-hidden" aria-label="Subcarpetas"></nav>
+          <nav id="mediaStrip" class="media-strip is-hidden" aria-label="Tira de imágenes"></nav>
 
           <button id="nextButton" class="nav-button next is-hidden" type="button" aria-label="Imagen siguiente" disabled hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
@@ -115,30 +127,17 @@
       <input id="folderInput" type="file" accept="image/*,video/mp4,video/quicktime,video/mpeg,.m4v,.mov,.mp4,.mpeg,.mpg,.avif" webkitdirectory multiple>
 
       <div id="sidebarScrim" class="sidebar-scrim" hidden></div>
-      <aside id="recentSidebar" class="recent-sidebar" aria-label="Menu lateral" aria-hidden="true">
+      <aside id="appSidebar" class="app-sidebar" aria-label="Panel principal" aria-hidden="true">
         <div class="sidebar-header">
           <h2 id="sidebarTitle">Carpetas</h2>
-          <button id="closeSidebarButton" class="icon-button" type="button" aria-label="Cerrar menu">
-            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          <button id="closeSidebarButton" class="icon-button" type="button" aria-label="Contraer panel">
+            <i class="iconoir-xmark" aria-hidden="true"></i>
           </button>
         </div>
         <div id="foldersPanel" class="sidebar-panel" data-sidebar-panel="folders">
-          <section class="sort-section" aria-label="Ordenamiento">
-            <div class="sort-control">
-              <label for="sortSelect">Ordenar por</label>
-              <div class="select-wrapper">
-                <select id="sortSelect">
-                  <option value="name">Nombre</option>
-                  <option value="dateDesc">Más recientes primero</option>
-                  <option value="dateAsc">Más antiguas primero</option>
-                </select>
-                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-              </div>
-            </div>
-          </section>
           <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
             <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
-              <i class="fa-solid fa-folder" aria-hidden="true"></i>
+              <i class="iconoir-folder" aria-hidden="true"></i>
               <span id="favoritePhotosTitle">Favoritos</span>
               <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
             </button>
@@ -147,7 +146,7 @@
             <div class="recent-section-header">
               <h3 id="recentFoldersTitle">Carpetas</h3>
               <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
-                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                <i class="iconoir-trash" aria-hidden="true"></i>
               </button>
             </div>
             <ol id="recentFoldersList" class="recent-list"></ol>
@@ -197,7 +196,42 @@
             <button id="resetAdjustmentsButton" class="button" type="button" style="width: 100%;">Restablecer ajustes</button>
           </div>
         </div>
+        <div id="sortPanel" class="sidebar-panel is-hidden" data-sidebar-panel="sort">
+          <section class="sort-options-section" aria-label="Ordenar carpeta">
+            <h3>Ordenar por</h3>
+            <ul id="sortOptionsList" class="sort-options-list">
+              <li>
+                <button type="button" class="sort-option" data-sort-value="name" aria-pressed="true">
+                  <i class="iconoir-check sort-option-check" aria-hidden="true"></i>
+                  <span>Nombre</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="sort-option" data-sort-value="dateDesc" aria-pressed="false">
+                  <i class="iconoir-check sort-option-check" aria-hidden="true"></i>
+                  <span>Más recientes primero</span>
+                </button>
+              </li>
+              <li>
+                <button type="button" class="sort-option" data-sort-value="dateAsc" aria-pressed="false">
+                  <i class="iconoir-check sort-option-check" aria-hidden="true"></i>
+                  <span>Más antiguas primero</span>
+                </button>
+              </li>
+            </ul>
+          </section>
+        </div>
       </aside>
+      <div id="deleteConfirmDialog" class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-hidden="true">
+        <div class="confirm-dialog-panel">
+          <h2 id="deleteConfirmTitle">Eliminar archivo</h2>
+          <p>Se eliminará <strong id="deleteConfirmName"></strong> de la carpeta de origen. Esta acción no se puede deshacer.</p>
+          <div class="confirm-dialog-actions">
+            <button id="deleteConfirmCancelButton" class="button" type="button">Cancelar</button>
+            <button id="deleteConfirmAcceptButton" class="button danger" type="button">Eliminar</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <svg width="0" height="0" aria-hidden="true" focusable="false">

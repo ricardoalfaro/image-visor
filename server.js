@@ -50,6 +50,11 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (requestUrl.pathname === "/media" && request.method === "DELETE") {
+      await deleteMediaFile(requestUrl.searchParams.get("path"), response);
+      return;
+    }
+
     if (requestUrl.pathname === "/media") {
       await sendMediaFile(requestUrl.searchParams.get("path"), response);
       return;
@@ -196,6 +201,32 @@ async function sendMediaFile(filePath, response) {
   }
 
   await sendFile(targetPath, response);
+}
+
+async function deleteMediaFile(filePath, response) {
+  if (!filePath) {
+    sendJson(response, 400, { error: "Missing media path" });
+    return;
+  }
+
+  const targetPath = path.resolve(filePath);
+
+  if (!isAllowedMediaPath(targetPath)) {
+    sendJson(response, 403, { error: "Media path is not allowed" });
+    return;
+  }
+
+  try {
+    await fsp.unlink(targetPath);
+    sendJson(response, 200, { deleted: true });
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      sendJson(response, 404, { error: "Not found" });
+      return;
+    }
+
+    sendJson(response, 500, { error: error.message });
+  }
 }
 
 function isAllowedMediaPath(filePath) {

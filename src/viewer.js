@@ -1,7 +1,8 @@
 import { FAVORITES_FOLDER_PATH, SLIDESHOW_INTERVAL_MS } from "./constants.js";
-import { state, clearActiveObjectUrl, clearFolderThumbnailObjectUrls } from "./state.js";
+import { state, clearActiveObjectUrl, clearFolderThumbnailObjectUrls, clearMediaThumbnailObjectUrls } from "./state.js";
 import {
   folderNav,
+  mediaStrip,
   placeholderImage,
   imageViewport,
   stage,
@@ -14,6 +15,7 @@ import {
   stopButton,
   shuffleButton,
   favoriteButton,
+  deleteButton,
   previousButton,
   nextButton,
   activeImage,
@@ -23,6 +25,7 @@ import {
 import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-pan.js";
 import { getFavoriteKey, isFavorite } from "./favorites.js";
 import { applyImageAdjustments, renderImageAdjustmentControls, resetImageAdjustments } from "./image-adjustments.js";
+import { canDeleteMedia } from "./delete.js";
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
@@ -136,6 +139,10 @@ function createRecentFolderButton(folder) {
     button.style.backgroundImage = `url("${thumbnailUrl}")`;
   } else {
     button.style.backgroundColor = getFolderFallbackColor(folder.id);
+    const icon = document.createElement("i");
+    icon.className = "iconoir-folder";
+    icon.setAttribute("aria-hidden", "true");
+    button.append(icon);
   }
   button.addEventListener("click", (event) => {
     event.stopPropagation();
@@ -222,6 +229,8 @@ export async function renderActiveImage() {
     stopSlideshow();
   }
 
+  renderMediaStrip();
+
   renderFolderNav();
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
@@ -240,6 +249,7 @@ export async function renderActiveImage() {
   stopButton.disabled = !hasImages || !state.isPlaying;
   shuffleButton.disabled = !hasImages || state.images.length < 2;
   favoriteButton.disabled = !hasImages || isVideo;
+  deleteButton.disabled = !hasImages || !canDeleteMedia(activeMedia);
   playButton.setAttribute("aria-pressed", String(state.isPlaying));
   playButton.classList.toggle("is-active", state.isPlaying);
   shuffleButton.setAttribute("aria-pressed", String(state.shuffleEnabled));
@@ -294,14 +304,48 @@ export async function renderActiveImage() {
   nextButton.disabled = !canMoveNext();
 }
 
+function renderMediaStrip() {
+  clearMediaThumbnailObjectUrls();
+  mediaStrip.innerHTML = "";
+  mediaStrip.classList.toggle("is-hidden", state.images.length === 0);
+
+  state.images.forEach((media, index) => {
+    const button = document.createElement("button");
+    const preview = document.createElement(media.type === "video" ? "video" : "img");
+    const isActive = index === state.activeIndex;
+    const url = media.url || URL.createObjectURL(media.file);
+
+    if (!media.url) {
+      state.mediaThumbnailObjectUrls.push(url);
+    }
+
+    button.className = "media-strip-item";
+    button.type = "button";
+    button.title = media.name;
+    button.setAttribute("aria-label", `Abrir ${media.name}`);
+    button.setAttribute("aria-pressed", String(isActive));
+    button.classList.toggle("is-active", isActive);
+    preview.src = url;
+    preview.alt = "";
+    preview.muted = true;
+    preview.playsInline = true;
+    button.append(preview);
+    button.addEventListener("click", () => selectImage(index));
+    mediaStrip.append(button);
+  });
+
+  const activeItem = mediaStrip.querySelector(".is-active");
+  activeItem?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+}
+
 export function updateFavoriteButton(media = state.images[state.activeIndex]) {
   const activeIsFavorite = Boolean(media && media.type !== "video" && isFavorite(media));
   const favoriteIcon = favoriteButton.querySelector("i");
   favoriteButton.setAttribute("aria-pressed", String(activeIsFavorite));
   favoriteButton.setAttribute("aria-label", activeIsFavorite ? "Quitar de favoritos" : "Agregar a favoritos");
   favoriteButton.title = activeIsFavorite ? "Quitar de favoritos" : "Agregar a favoritos";
-  favoriteIcon.classList.toggle("fa-solid", activeIsFavorite);
-  favoriteIcon.classList.toggle("fa-regular", !activeIsFavorite);
+  favoriteIcon.classList.toggle("iconoir-star-solid", activeIsFavorite);
+  favoriteIcon.classList.toggle("iconoir-star", !activeIsFavorite);
 }
 
 function getImageUrl(image) {
@@ -489,8 +533,8 @@ export function updateFullscreenButton() {
     isFullscreen ? "Salir de pantalla completa" : "Pantalla completa",
   );
 
-  fullscreenIcon.classList.toggle("fa-expand", !isFullscreen);
-  fullscreenIcon.classList.toggle("fa-compress", isFullscreen);
+  fullscreenIcon.classList.toggle("iconoir-expand", !isFullscreen);
+  fullscreenIcon.classList.toggle("iconoir-compress", isFullscreen);
 
   if (!isFullscreen) {
     resetFullscreenZoom();

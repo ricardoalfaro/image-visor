@@ -2,10 +2,11 @@ import { state } from "./src/state.js";
 import {
   folderInput, previousButton, nextButton, fullscreenButton,
   playButton, stopButton, shuffleButton, zoomOutButton, zoomInButton,
-  resetZoomButton, themeToggleButton, closeViewerButton, menuButton,
+  resetZoomButton, themeToggleButton, closeViewerButton, sidebarToggleButton, menuButton, sortButton,
   closeSidebarButton, sidebarScrim, clearRecentFoldersButton, imageViewport,
-  controls, activeImage, activeVideo, photoFrame, folderNav, sortSelect,
-  sidebarImportButton, favoriteButton, adjustmentsButton, fullscreenAdjustmentsButton,
+  controls, activeImage, activeVideo, photoFrame, folderNav, mediaStrip,
+  sidebarImportButton, favoriteButton, deleteButton, deleteConfirmDialog, deleteConfirmCancelButton, deleteConfirmAcceptButton,
+  adjustmentsButton, fullscreenAdjustmentsButton,
   adjustmentInputs, resetAdjustmentsButton
 } from "./src/dom.js";
 import {
@@ -20,10 +21,11 @@ import {
   setZoom, startImageDrag, dragImage, endImageDrag, resetFullscreenZoom
 } from "./src/zoom-pan.js";
 import {
-  cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites
+  cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites, renderSortOptions
 } from "./src/ui.js";
 import { loadRecentFolders, clearRecentFolders } from "./src/storage.js";
 import { loadFavorites, toggleFavorite } from "./src/favorites.js";
+import { openDeleteConfirm, closeDeleteConfirm, confirmDelete } from "./src/delete.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
 import {
   renderImageAdjustmentControls,
@@ -50,6 +52,17 @@ function handleFullscreenChange() {
   imageViewport.classList.remove("show-favorite-control");
   window.clearTimeout(favoriteControlTimer);
   favoriteControlTimer = 0;
+  document.body.classList.remove("show-fullscreen-media-strip");
+}
+
+function handleFullscreenMediaStrip(event) {
+  if (!document.fullscreenElement) {
+    return;
+  }
+
+  const isInsideStrip = mediaStrip.contains(event.target);
+  const isNearBottom = event.clientY >= window.innerHeight - 72;
+  document.body.classList.toggle("show-fullscreen-media-strip", isInsideStrip || isNearBottom);
 }
 
 function initializeOnboarding() {
@@ -64,7 +77,12 @@ function initializeOnboarding() {
 }
 
 function handleViewerOutsideClick(event) {
-  if (!state.images.length || document.fullscreenElement || document.body.classList.contains("has-open-sidebar")) {
+  if (
+    !state.images.length ||
+    document.fullscreenElement ||
+    document.body.classList.contains("has-open-sidebar") ||
+    document.body.classList.contains("has-open-dialog")
+  ) {
     return;
   }
 
@@ -85,6 +103,17 @@ function handleViewerOutsideClick(event) {
 }
 
 function handleKeyboard(event) {
+  if (document.body.classList.contains("has-open-dialog")) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeDeleteConfirm();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      confirmDelete();
+    }
+    return;
+  }
+
   if (event.key === "Escape" && document.body.classList.contains("has-open-sidebar")) {
     event.preventDefault();
     closeSidebar();
@@ -210,16 +239,32 @@ favoriteButton.addEventListener("click", async () => {
     updateFavoriteButton(activeMedia);
   }
 });
+deleteButton.addEventListener("click", () => openDeleteConfirm());
+deleteConfirmCancelButton.addEventListener("click", () => closeDeleteConfirm());
+deleteConfirmAcceptButton.addEventListener("click", () => confirmDelete());
+deleteConfirmDialog.addEventListener("click", (event) => {
+  if (event.target === deleteConfirmDialog) {
+    closeDeleteConfirm();
+  }
+});
 zoomOutButton.addEventListener("click", () => setZoom(state.zoom - 10));
 zoomInButton.addEventListener("click", () => setZoom(state.zoom + 10));
 resetZoomButton.addEventListener("click", () => setZoom(100));
 themeToggleButton.addEventListener("click", cycleThemePreference);
 closeViewerButton.addEventListener("click", closeViewer);
+sidebarToggleButton.addEventListener("click", () => {
+  if (document.body.classList.contains("has-open-sidebar")) {
+    closeSidebar();
+  } else {
+    openSidebar(state.activeSidebarPanel);
+  }
+});
 menuButton.addEventListener("click", () => toggleSidebar("folders"));
 adjustmentsButton.addEventListener("click", () => {
   toggleSidebar("adjustments");
   renderImageAdjustmentControls();
 });
+sortButton.addEventListener("click", () => toggleSidebar("sort"));
 fullscreenAdjustmentsButton.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleSidebar("adjustments");
@@ -229,7 +274,7 @@ fullscreenAdjustmentsButton.addEventListener("click", (event) => {
 fullscreenAdjustmentsButton.addEventListener("pointerdown", (event) => {
   event.stopPropagation();
 });
-closeSidebarButton.addEventListener("click", closeSidebar);
+closeSidebarButton.addEventListener("click", () => closeSidebar());
 sidebarScrim.addEventListener("click", closeSidebar);
 clearRecentFoldersButton.addEventListener("click", clearRecentFolders);
 resetAdjustmentsButton.addEventListener("click", resetImageAdjustments);
@@ -250,19 +295,28 @@ controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
 activeVideo.addEventListener("loadedmetadata", updateFrameOrientation);
 activeVideo.addEventListener("ended", handleVideoEnded);
-sortSelect.addEventListener("change", (event) => {
-  state.sortBy = event.target.value;
-  applyFolderFilter({ keepIndex: true });
-});
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);
+document.addEventListener("pointermove", handleFullscreenMediaStrip);
+mediaStrip.addEventListener("pointerleave", () => {
+  if (document.fullscreenElement) {
+    document.body.classList.remove("show-fullscreen-media-strip");
+  }
+});
 document.addEventListener("click", handleViewerOutsideClick);
 document.addEventListener("keydown", handleKeyboard);
 
-setThemePreference("auto", { persist: false });
+let initialTheme = "auto";
+
+try {
+  initialTheme = localStorage.getItem("imageVisorTheme") || "auto";
+} catch (error) {}
+
+setThemePreference(initialTheme, { persist: false });
 await loadRecentFolders();
 await loadFavorites();
 renderRecentFolders();
 renderFavorites();
 renderImageAdjustmentControls();
+renderSortOptions();
 initializeOnboarding();
