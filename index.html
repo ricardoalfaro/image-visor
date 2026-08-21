@@ -19,11 +19,16 @@
       </div>
       <header class="app-header">
         <div class="app-brand">Image Viewer Pro</div>
-        <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
-          <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
-          <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
-          <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
-        </button>
+        <div class="app-header-actions">
+          <button id="sidebarImportButton" class="icon-button" type="button" aria-label="Importar una carpeta" title="Importar una carpeta">
+            <i class="iconoir-folder-plus" aria-hidden="true"></i>
+          </button>
+          <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
+            <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
+            <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
+            <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
+          </button>
+        </div>
       </header>
       <nav class="app-rail" aria-label="Panel principal">
         <button id="sidebarToggleButton" class="icon-button rail-button rail-toggle" type="button" aria-label="Desplegar panel" aria-expanded="false" title="Desplegar panel">
@@ -152,9 +157,6 @@
             <ol id="recentFoldersList" class="recent-list"></ol>
             <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
           </section>
-          <div class="sidebar-footer">
-            <button id="sidebarImportButton" class="button primary welcome-button" style="width: 100%;">Importar una carpeta</button>
-          </div>
         </div>
         <div id="adjustmentsPanel" class="sidebar-panel is-hidden" data-sidebar-panel="adjustments">
           <section class="adjustments-section" aria-label="Ajustes temporales de imagen">

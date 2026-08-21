@@ -171,6 +171,12 @@ button {
   font-weight: 700;
 }
 
+.app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .app-header .icon-button {
   width: 36px;
   height: 36px;
@@ -792,20 +798,6 @@ button {
   font-weight: 500;
 }
 
-.button.primary.welcome-button {
-  min-height: 58px;
-  padding: 0 30px;
-  border: none;
-  border-radius: 1rem;
-  background: linear-gradient(115deg, #9900ff 0%, #0058ff 45%, #9900ff 100%);
-  background-size: 220% 220%;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  box-shadow: 0 14px 34px rgba(153, 0, 255, 0.28), 0 8px 24px rgba(0, 88, 255, 0.24);
-  animation: welcome-button-gradient 3200ms ease-in-out infinite alternate;
-}
-
 .icon-button {
   width: 44px;
   height: 44px;
@@ -1241,11 +1233,6 @@ button {
 .icon-button.is-active:hover:not(:disabled),
 .icon-button[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--active);
-}
-
-.button.primary.welcome-button:hover:not(:disabled) {
-  background: linear-gradient(115deg, #9900ff 0%, #0058ff 45%, #9900ff 100%);
-  background-size: 220% 220%;
 }
 
 .button:disabled,
@@ -1694,16 +1681,6 @@ svg {
   to {
     opacity: 1;
     transform: translate(-50%, 0);
-  }
-}
-
-@keyframes welcome-button-gradient {
-  from {
-    background-position: 0% 50%;
-  }
-
-  to {
-    background-position: 100% 50%;
   }
 }
 
