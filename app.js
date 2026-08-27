@@ -3,10 +3,10 @@ import {
   folderInput, previousButton, nextButton, fullscreenButton,
   playButton, stopButton, shuffleButton,
   resetZoomButton, themeToggleButton, closeViewerButton, sidebarToggleButton, menuButton, sortButton,
-  sidebarScrim, clearRecentFoldersButton, newCollectionButton, addToCollectionButton, foldersSectionToggle, collectionsSectionToggle, imageViewport,
+  sidebarScrim, newCollectionButton, addToCollectionButton, foldersSectionToggle, collectionsSectionToggle, imageViewport,
   controls, activeImage, activeVideo, photoFrame, folderNav, mediaStrip,
+  gallerySelectionBar, gallerySelectionCount, gallerySelectionCancel, gallerySelectionDelete,
   sidebarImportButton, favoriteButton, deleteButton, deleteConfirmDialog, deleteConfirmCancelButton, deleteConfirmAcceptButton,
-  clearRecentConfirmDialog, clearRecentConfirmCancelButton, clearRecentConfirmAcceptButton,
   newCollectionDialog, newCollectionName, newCollectionCancelButton, newCollectionAcceptButton,
   collectionMenu, zoomPopover, zoomSlider, adjustmentsButton,
   adjustmentInputs, resetAdjustmentsButton
@@ -16,7 +16,7 @@ import {
 } from "./src/file-loader.js";
 import {
   showPrevious, showNext, toggleFullscreen, startSlideshow, stopSlideshowAndRender,
-  toggleShuffle, handleImageDoubleClick, updateFullscreenButton, updateFrameOrientation,
+  toggleShuffle, handleImageDoubleClick, updateFullscreenButton, updateFrameOrientation, selectImage,
   handleVideoEnded, isActiveVideo, applyFolderFilter, updateFavoriteButton, renderActiveImage, renderFolderNav
 } from "./src/viewer.js";
 import {
@@ -25,9 +25,9 @@ import {
 import {
   cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites, renderCollections, renderSortOptions, showNotice
 } from "./src/ui.js";
-import { loadRecentFolders, clearRecentFolders } from "./src/storage.js";
-import { loadFavorites, toggleFavorite } from "./src/favorites.js";
-import { openDeleteConfirm, closeDeleteConfirm, confirmDelete, trapDeleteDialogFocus } from "./src/delete.js";
+import { loadRecentFolders } from "./src/storage.js";
+import { isFavorite, loadFavorites, toggleFavorite } from "./src/favorites.js";
+import { openDeleteConfirm, openDeleteBatchConfirm, closeDeleteConfirm, confirmDelete, trapDeleteDialogFocus } from "./src/delete.js";
 import { createCollection, isMediaInCollection, loadCollections, toggleMediaInCollection } from "./src/collections.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
 import {
@@ -38,40 +38,33 @@ import {
 
 let favoriteControlTimer = 0;
 let viewerControlsTimer = 0;
-let clearRecentFoldersTrigger = null;
 let pendingCollectionMedia = null;
 
-function openClearRecentFoldersConfirm() {
-  clearRecentFoldersTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  clearRecentConfirmDialog.setAttribute("aria-hidden", "false");
-  document.body.classList.add("has-open-dialog");
-  clearRecentConfirmCancelButton.focus();
+function setMediaStripExpanded(expanded) {
+  if (expanded) {
+    closeSidebar();
+    state.gallerySelectedMedia.clear();
+    state.gallerySelectionMode = false;
+  }
+  else {
+    state.gallerySelectedMedia.clear();
+    state.gallerySelectionMode = false;
+    mediaStrip.querySelectorAll(".media-strip-item").forEach((item) => item.classList.remove("is-selected-for-delete"));
+  }
+  state.mediaStripExpanded = expanded;
+  document.body.classList.toggle("media-strip-expanded", expanded);
+  mediaStrip.setAttribute("aria-expanded", String(expanded));
+  renderGallerySelectionBar();
+  if (expanded) mediaStrip.focus({ preventScroll: true });
 }
 
-function closeClearRecentFoldersConfirm(options = {}) {
-  clearRecentConfirmDialog.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("has-open-dialog");
-
-  if (options.restoreFocus !== false && clearRecentFoldersTrigger?.isConnected) {
-    clearRecentFoldersTrigger.focus();
-  }
-
-  clearRecentFoldersTrigger = null;
-}
-
-function trapClearRecentDialogFocus(event) {
-  if (event.key !== "Tab") {
-    return;
-  }
-
-  const focusableElements = [clearRecentConfirmCancelButton, clearRecentConfirmAcceptButton];
-  const currentIndex = focusableElements.indexOf(document.activeElement);
-  const nextIndex = event.shiftKey
-    ? (currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1)
-    : (currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1);
-
-  event.preventDefault();
-  focusableElements[nextIndex].focus();
+function renderGallerySelectionBar() {
+  const count = state.gallerySelectedMedia.size;
+  const visible = state.mediaStripExpanded && state.gallerySelectionMode && count > 0;
+  gallerySelectionBar.classList.toggle("is-visible", visible);
+  gallerySelectionBar.setAttribute("aria-hidden", String(!visible));
+  gallerySelectionCount.textContent = `${count} ${count === 1 ? "foto seleccionada" : "fotos seleccionadas"}`;
+  gallerySelectionDelete.disabled = count === 0;
 }
 
 function toggleSidebarSection(event) {
@@ -101,9 +94,40 @@ function closeCollectionDialog() {
 
 function renderCollectionMenu() {
   collectionMenu.replaceChildren();
+  const activeMedia = state.images[state.activeIndex];
+  const favoriteItem = document.createElement("button");
+  const favoriteIncluded = isFavorite(activeMedia);
+  favoriteItem.type = "button";
+  favoriteItem.setAttribute("role", "menuitem");
+  favoriteItem.disabled = !activeMedia || activeMedia.type === "video";
+  favoriteItem.title = favoriteItem.disabled ? "Favoritos solo admite imágenes" : "Agregar o quitar de Favoritos";
+  favoriteItem.classList.toggle("is-selected", favoriteIncluded);
+  favoriteItem.append(document.createTextNode("Favoritos"));
+  if (favoriteIncluded) {
+    const check = document.createElement("i");
+    check.className = "iconoir-check";
+    check.setAttribute("aria-hidden", "true");
+    favoriteItem.append(check);
+  }
+  favoriteItem.addEventListener("click", async () => {
+    if (!activeMedia || activeMedia.type === "video") return;
+    const result = await toggleFavorite(activeMedia);
+    collectionMenu.classList.add("is-hidden");
+    addToCollectionButton.setAttribute("aria-expanded", "false");
+    renderFavorites();
+    renderCollections();
+    updateFavoriteButton(activeMedia);
+    if (state.activeFolderPath === FAVORITES_FOLDER_PATH) {
+      applyFolderFilter({ keepIndex: true });
+      await renderActiveImage();
+    }
+    showNotice(result ? "Agregada a Favoritos." : "Quitada de Favoritos.", "info");
+  });
+  collectionMenu.append(favoriteItem);
+
   state.collections.forEach((collection) => {
     const item = document.createElement("button");
-    const isIncluded = isMediaInCollection(collection.id, state.images[state.activeIndex]);
+    const isIncluded = isMediaInCollection(collection.id, activeMedia);
     item.type = "button";
     item.setAttribute("role", "menuitem");
     item.classList.toggle("is-selected", isIncluded);
@@ -115,7 +139,7 @@ function renderCollectionMenu() {
       item.append(check);
     }
     item.addEventListener("click", async () => {
-      const result = await toggleMediaInCollection(collection.id, state.images[state.activeIndex]);
+      const result = await toggleMediaInCollection(collection.id, activeMedia);
       collectionMenu.classList.add("is-hidden");
       addToCollectionButton.setAttribute("aria-expanded", "false");
       renderCollections();
@@ -235,13 +259,6 @@ function handleKeyboard(event) {
 
     if (event.key === "Escape") {
       event.preventDefault();
-      if (clearRecentConfirmDialog.getAttribute("aria-hidden") === "false") {
-        closeClearRecentFoldersConfirm();
-      } else {
-        closeDeleteConfirm();
-      }
-    } else if (clearRecentConfirmDialog.getAttribute("aria-hidden") === "false") {
-      trapClearRecentDialogFocus(event);
     } else {
       trapDeleteDialogFocus(event);
     }
@@ -258,12 +275,40 @@ function handleKeyboard(event) {
     return;
   }
 
+  if (state.mediaStripExpanded) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setMediaStripExpanded(false);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      setMediaStripExpanded(false);
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      (event.key === "ArrowLeft" ? showPrevious : showNext)();
+    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const items = Array.from(mediaStrip.querySelectorAll(".media-strip-item"));
+      const firstRowTop = items[0]?.offsetTop;
+      const columns = Math.max(1, items.findIndex((item) => item.offsetTop > firstRowTop));
+      const delta = event.key === "ArrowUp" ? -columns : columns;
+      const nextIndex = Math.max(0, Math.min(state.images.length - 1, state.activeIndex + delta));
+      selectImage(nextIndex);
+    }
+    return;
+  }
+
   if (!state.images.length) {
     if (event.key === "Enter" && canOpenFolderFromKeyboard(event)) {
       event.preventDefault();
       loadLocalFolder();
     }
 
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    setMediaStripExpanded(true);
     return;
   }
 
@@ -379,6 +424,7 @@ favoriteButton.addEventListener("click", async () => {
   if (!activeMedia || activeMedia.type === "video") return;
   await toggleFavorite(activeMedia);
   renderFavorites();
+  renderCollections();
 
   if (state.activeFolderPath === FAVORITES_FOLDER_PATH) {
     applyFolderFilter({ keepIndex: true });
@@ -390,33 +436,17 @@ favoriteButton.addEventListener("click", async () => {
 deleteButton.addEventListener("click", () => openDeleteConfirm());
 deleteButton.addEventListener("pointerdown", (event) => event.stopPropagation());
 deleteConfirmCancelButton.addEventListener("click", () => closeDeleteConfirm());
-deleteConfirmAcceptButton.addEventListener("click", () => confirmDelete());
+deleteConfirmAcceptButton.addEventListener("click", async () => {
+  await confirmDelete();
+  if (state.mediaStripExpanded && !state.pendingDeleteMediaBatch) setMediaStripExpanded(false);
+});
 deleteConfirmDialog.addEventListener("click", (event) => {
   if (event.target === deleteConfirmDialog) {
     closeDeleteConfirm();
   }
 });
-clearRecentFoldersButton.addEventListener("click", openClearRecentFoldersConfirm);
 foldersSectionToggle.addEventListener("click", toggleSidebarSection);
 collectionsSectionToggle.addEventListener("click", toggleSidebarSection);
-clearRecentConfirmCancelButton.addEventListener("click", () => closeClearRecentFoldersConfirm());
-clearRecentConfirmAcceptButton.addEventListener("click", async () => {
-  clearRecentConfirmAcceptButton.disabled = true;
-  try {
-    await clearRecentFolders();
-    closeClearRecentFoldersConfirm({ restoreFocus: false });
-    sidebarImportButton.focus();
-  } catch (error) {
-    showNotice("No se pudieron limpiar las carpetas recientes.", "error");
-  } finally {
-    clearRecentConfirmAcceptButton.disabled = false;
-  }
-});
-clearRecentConfirmDialog.addEventListener("click", (event) => {
-  if (event.target === clearRecentConfirmDialog) {
-    closeClearRecentFoldersConfirm();
-  }
-});
 newCollectionButton.addEventListener("click", () => openCollectionDialog());
 addToCollectionButton.addEventListener("click", () => {
   renderCollectionMenu();
@@ -476,6 +506,25 @@ mediaStrip.addEventListener("pointerleave", () => {
     document.body.classList.remove("show-fullscreen-media-strip");
   }
 });
+mediaStrip.addEventListener("wheel", (event) => {
+  if (state.mediaStripExpanded || event.deltaY >= 0) return;
+  event.preventDefault();
+  setMediaStripExpanded(true);
+}, { passive: false });
+window.addEventListener("image-visor:gallery-selection-changed", renderGallerySelectionBar);
+window.addEventListener("image-visor:gallery-open-image", () => setMediaStripExpanded(false));
+gallerySelectionCancel.addEventListener("click", () => {
+  state.gallerySelectedMedia.clear();
+  state.gallerySelectionMode = false;
+  renderGallerySelectionBar();
+  mediaStrip.querySelectorAll(".media-strip-select").forEach((selector) => { selector.checked = false; });
+  mediaStrip.querySelectorAll(".media-strip-item").forEach((item) => item.classList.remove("is-selected-for-delete"));
+});
+gallerySelectionDelete.addEventListener("click", async () => {
+  const targets = Array.from(state.gallerySelectedMedia);
+  if (!targets.length) return;
+  openDeleteBatchConfirm(targets);
+});
 document.addEventListener("click", handleViewerOutsideClick);
 document.addEventListener("keydown", handleKeyboard);
 
@@ -490,8 +539,8 @@ await loadRecentFolders();
 await loadFavorites();
 await loadCollections();
 renderRecentFolders();
-renderFavorites();
 renderCollections();
+renderFavorites();
 renderImageAdjustmentControls();
 renderSortOptions();
 initializeOnboarding();

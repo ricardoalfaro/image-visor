@@ -16,18 +16,15 @@ import {
   themeToggleButton,
   recentFoldersList,
   emptyRecentFolders,
-  clearRecentFoldersButton,
-  favoritePhotosCount,
-  favoriteFolderButton,
   collectionsList,
   emptyCollections,
   sortOptionButtons
 } from "./dom.js";
 import { openRecentFolder, refreshRecentFolder } from "./file-loader.js";
-import { removeRecentFolder } from "./storage.js";
+import { removeRecentFolder, renameRecentFolder } from "./storage.js";
 import { COLLECTIONS_FOLDER_PREFIX, FAVORITES_FOLDER_PATH } from "./constants.js";
 import { deleteCollection, renameCollection } from "./collections.js";
-import { getAvailableFavorites, selectFolder, applyFolderFilter } from "./viewer.js";
+import { getAvailableFavorites, selectFolder } from "./viewer.js";
 
 const SIDEBAR_PANELS = {
   folders: { element: foldersPanel, trigger: menuButton, title: "Carpetas" },
@@ -159,28 +156,30 @@ function getThemeLabel(theme) {
 export function renderRecentFolders() {
   recentFoldersList.innerHTML = "";
   emptyRecentFolders.classList.toggle("is-hidden", state.recentFolders.length > 0);
-  clearRecentFoldersButton.classList.toggle("is-hidden", state.recentFolders.length === 0);
 
   state.recentFolders.forEach((folder) => {
     const item = document.createElement("li");
     const button = document.createElement("button");
     const refreshButton = document.createElement("button");
+    const renameButton = document.createElement("button");
     const removeButton = document.createElement("button");
     const icon = document.createElement("i");
     const refreshIcon = document.createElement("i");
     const removeIcon = document.createElement("i");
+    const renameIcon = document.createElement("i");
     const label = document.createElement("span");
     const count = document.createElement("span");
 
     item.className = "recent-folder-item";
     button.className = "recent-folder-button";
     button.type = "button";
-    button.title = `${folder.name}, ${getFolderPhotoCountLabel(folder)}`;
+    const displayName = folder.customName || folder.name;
+    button.title = `${displayName}, ${getFolderPhotoCountLabel(folder)}`;
     button.setAttribute("aria-label", button.title);
     icon.className = "iconoir-folder";
     icon.setAttribute("aria-hidden", "true");
     label.className = "recent-folder-name";
-    label.textContent = folder.name;
+    label.textContent = displayName;
     count.className = "recent-folder-count";
     count.textContent = Number.isInteger(folder.mediaCount) ? String(folder.mediaCount) : "–";
     count.setAttribute("aria-label", getFolderPhotoCountLabel(folder));
@@ -190,6 +189,12 @@ export function renderRecentFolders() {
     refreshButton.setAttribute("aria-label", `Actualizar ${folder.name}`);
     refreshIcon.className = "iconoir-refresh";
     refreshIcon.setAttribute("aria-hidden", "true");
+    renameButton.className = "rename-recent-button";
+    renameButton.type = "button";
+    renameButton.title = `Renombrar ${displayName}`;
+    renameButton.setAttribute("aria-label", `Renombrar ${displayName}`);
+    renameIcon.className = "iconoir-edit-pencil";
+    renameIcon.setAttribute("aria-hidden", "true");
     removeButton.className = "remove-recent-button";
     removeButton.type = "button";
     removeButton.title = `Quitar ${folder.name}`;
@@ -198,12 +203,21 @@ export function renderRecentFolders() {
     removeIcon.setAttribute("aria-hidden", "true");
 
     button.append(icon, label, count);
-    button.addEventListener("click", () => openRecentFolder(folder.id));
+    button.addEventListener("click", async () => {
+      await openRecentFolder(folder.id);
+      closeSidebar();
+    });
     refreshButton.append(refreshIcon);
     refreshButton.addEventListener("click", () => refreshRecentFolder(folder.id));
+    renameButton.append(renameIcon);
+    renameButton.addEventListener("click", () => {
+      const nextName = window.prompt("Nombre local para esta carpeta:", displayName);
+      if (nextName === null || !nextName.trim()) return;
+      renameRecentFolder(folder.id, nextName);
+    });
     removeButton.append(removeIcon);
     removeButton.addEventListener("click", () => removeRecentFolder(folder.id));
-    item.append(button, refreshButton, removeButton);
+    item.append(button, renameButton, refreshButton, removeButton);
     recentFoldersList.append(item);
   });
 }
@@ -218,15 +232,53 @@ function getFolderPhotoCountLabel(folder) {
 
 export function renderFavorites() {
   const favorites = getAvailableFavorites();
+  const favoritePhotosCount = collectionsList.querySelector("#favoritePhotosCount");
+  if (!favoritePhotosCount) return;
   favoritePhotosCount.textContent = String(favorites.length);
   favoritePhotosCount.setAttribute("aria-label", `${favorites.length} favoritos`);
-  favoriteFolderButton.disabled = favorites.length === 0;
-  favoriteFolderButton.setAttribute("aria-label", `Abrir Favoritos, ${favorites.length} fotos`);
 }
 
 export function renderCollections() {
+  for (const objectUrl of state.collectionCoverObjectUrls.values()) URL.revokeObjectURL(objectUrl);
+  state.collectionCoverObjectUrls.clear();
   collectionsList.innerHTML = "";
   emptyCollections.classList.toggle("is-hidden", state.collections.length > 0);
+
+  const favorites = getAvailableFavorites();
+  const favoriteItem = document.createElement("li");
+  const favoriteButton = document.createElement("button");
+  const favoriteIcon = document.createElement("i");
+  const favoriteLabel = document.createElement("span");
+  const favoriteCount = document.createElement("span");
+  favoriteItem.className = "recent-folder-item permanent-collection-item";
+  favoriteButton.className = "recent-folder-button";
+  favoriteButton.type = "button";
+  favoriteButton.title = `Favoritos, ${favorites.length} fotos`;
+  favoriteButton.setAttribute("aria-label", `Abrir Favoritos, ${favorites.length} fotos`);
+  const favoriteMedia = favorites.find((media) => media.type === "image") || favorites[0];
+  if (favoriteMedia?.file instanceof Blob) {
+    const coverUrl = URL.createObjectURL(favoriteMedia.file);
+    state.collectionCoverObjectUrls.set("favorite", coverUrl);
+    favoriteIcon.className = "collection-cover";
+    favoriteIcon.style.backgroundImage = `url("${coverUrl}")`;
+    favoriteIcon.setAttribute("aria-label", "Portada de Favoritos");
+  } else {
+    favoriteIcon.className = "iconoir-star";
+    favoriteIcon.setAttribute("aria-hidden", "true");
+  }
+  favoriteLabel.className = "recent-folder-name";
+  favoriteLabel.textContent = "Favoritos";
+  favoriteCount.id = "favoritePhotosCount";
+  favoriteCount.className = "recent-folder-count";
+  favoriteCount.textContent = String(favorites.length);
+  favoriteCount.setAttribute("aria-label", `${favorites.length} favoritos`);
+  favoriteButton.append(favoriteIcon, favoriteLabel, favoriteCount);
+  favoriteButton.addEventListener("click", async () => {
+    await selectFolder(FAVORITES_FOLDER_PATH);
+    closeSidebar();
+  });
+  favoriteItem.append(favoriteButton);
+  collectionsList.append(favoriteItem);
 
   state.collections.forEach((collection) => {
     const item = document.createElement("li");
@@ -242,8 +294,17 @@ export function renderCollections() {
     openButton.type = "button";
     openButton.title = `${collection.name}, ${collection.media.length} fotos`;
     openButton.setAttribute("aria-label", `Abrir colección ${collection.name}, ${collection.media.length} fotos`);
-    icon.className = "iconoir-collection";
-    icon.setAttribute("aria-hidden", "true");
+    const coverMedia = collection.media.find((media) => media.type === "image") || collection.media[0];
+    if (coverMedia?.file instanceof Blob) {
+      const coverUrl = URL.createObjectURL(coverMedia.file);
+      state.collectionCoverObjectUrls.set(collection.id, coverUrl);
+      icon.className = "collection-cover";
+      icon.style.backgroundImage = `url("${coverUrl}")`;
+      icon.setAttribute("aria-label", `Portada de ${collection.name}`);
+    } else {
+      icon.className = "iconoir-bookmark";
+      icon.setAttribute("aria-hidden", "true");
+    }
     label.className = "recent-folder-name";
     label.textContent = collection.name;
     count.className = "recent-folder-count";
@@ -252,6 +313,7 @@ export function renderCollections() {
     openButton.append(icon, label, count);
     openButton.addEventListener("click", async () => {
       await selectFolder(`${COLLECTIONS_FOLDER_PREFIX}${collection.id}`);
+      closeSidebar();
     });
 
     renameButton.className = "refresh-recent-button";
@@ -287,10 +349,6 @@ export function renderCollections() {
     collectionsList.append(item);
   });
 }
-
-favoriteFolderButton.addEventListener("click", async () => {
-  await selectFolder(FAVORITES_FOLDER_PATH);
-});
 
 export function getRecentFolderMeta(folder) {
   if (state.recentFolderFiles.has(folder.id)) {

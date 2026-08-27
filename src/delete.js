@@ -33,6 +33,7 @@ export function openDeleteConfirm() {
   }
 
   state.pendingDeleteMedia = media;
+  state.pendingDeleteMediaBatch = null;
   deleteTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   deleteConfirmName.textContent = media.name;
   deleteConfirmDialog.setAttribute("aria-hidden", "false");
@@ -40,8 +41,24 @@ export function openDeleteConfirm() {
   deleteConfirmCancelButton.focus();
 }
 
+export function openDeleteBatchConfirm(mediaItems) {
+  const targets = Array.from(new Set(mediaItems)).filter(canDeleteMedia);
+  if (!targets.length) {
+    showNotice("No se pueden eliminar las fotos seleccionadas desde esta fuente.", "warning");
+    return;
+  }
+  state.pendingDeleteMediaBatch = targets;
+  state.pendingDeleteMedia = null;
+  deleteTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  deleteConfirmName.textContent = `${targets.length} ${targets.length === 1 ? "foto seleccionada" : "fotos seleccionadas"}`;
+  deleteConfirmDialog.setAttribute("aria-hidden", "false");
+  document.body.classList.add("has-open-dialog");
+  deleteConfirmCancelButton.focus();
+}
+
 export function closeDeleteConfirm(options = {}) {
   state.pendingDeleteMedia = null;
+  state.pendingDeleteMediaBatch = null;
   deleteConfirmDialog.setAttribute("aria-hidden", "true");
   document.body.classList.remove("has-open-dialog");
 
@@ -68,6 +85,12 @@ export function trapDeleteDialogFocus(event) {
 }
 
 export async function confirmDelete() {
+  if (state.pendingDeleteMediaBatch?.length) {
+    const targets = state.pendingDeleteMediaBatch;
+    const deleted = await deleteMediaBatch(targets);
+    if (deleted) closeDeleteConfirm({ restoreFocus: false });
+    return;
+  }
   const media = state.pendingDeleteMedia;
 
   if (!media) {
@@ -105,6 +128,34 @@ export async function confirmDelete() {
   await renderActiveImage();
   renderFavorites();
   showNotice(`"${media.name}" se eliminó.`, "info");
+}
+
+export async function deleteMediaBatch(mediaItems) {
+  const targets = Array.from(new Set(mediaItems)).filter(canDeleteMedia);
+  if (!targets.length) {
+    showNotice("No se pueden eliminar las fotos seleccionadas desde esta fuente.", "warning");
+    return false;
+  }
+
+  try {
+    for (const media of targets) await removeMediaFromSource(media);
+  } catch (error) {
+    showNotice(`No se pudieron eliminar todas las fotos. ${error?.message || ""}`.trim(), "error");
+    return false;
+  }
+
+  for (const media of targets) {
+    if (isFavorite(media)) await toggleFavorite(media);
+  }
+  const targetSet = new Set(targets);
+  state.allMedia = state.allMedia.filter((item) => !targetSet.has(item));
+  state.folders = getFoldersFromMedia(state.allMedia);
+  applyFolderFilter();
+  state.activeIndex = state.images.length ? Math.min(state.activeIndex, state.images.length - 1) : -1;
+  await renderActiveImage();
+  renderFavorites();
+  showNotice(`${targets.length} ${targets.length === 1 ? "foto eliminada" : "fotos eliminadas"}.`, "info");
+  return true;
 }
 
 async function removeMediaFromSource(media) {

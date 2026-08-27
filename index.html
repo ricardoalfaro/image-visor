@@ -24,18 +24,18 @@
         </div>
       </header>
       <nav class="app-rail" aria-label="Panel principal">
-        <button id="sidebarToggleButton" class="icon-button rail-button rail-toggle" type="button" aria-label="Desplegar panel" aria-expanded="false" title="Desplegar panel">
-          <i class="iconoir-sidebar-collapse" aria-hidden="true"></i>
-        </button>
-        <span class="rail-divider" aria-hidden="true"></span>
         <button id="menuButton" class="icon-button rail-button" type="button" aria-label="Carpetas" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Carpetas">
           <i class="iconoir-folder" aria-hidden="true"></i>
+        </button>
+        <button id="sortButton" class="icon-button rail-button" type="button" aria-label="Ordenar" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Ordenar">
+          <i class="iconoir-sort" aria-hidden="true"></i>
         </button>
         <button id="adjustmentsButton" class="icon-button rail-button" type="button" aria-label="Controles de imagen" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Controles">
           <i class="iconoir-settings" aria-hidden="true"></i>
         </button>
-        <button id="sortButton" class="icon-button rail-button" type="button" aria-label="Ordenar" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Ordenar">
-          <i class="iconoir-sort" aria-hidden="true"></i>
+        <span class="rail-divider" aria-hidden="true"></span>
+        <button id="sidebarToggleButton" class="icon-button rail-button rail-toggle" type="button" aria-label="Desplegar panel" aria-expanded="false" title="Desplegar panel">
+          <i class="iconoir-sidebar-collapse" aria-hidden="true"></i>
         </button>
         <button id="themeToggleButton" class="icon-button rail-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
           <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
@@ -121,7 +121,12 @@
           </figure>
 
           <nav id="folderNav" class="folder-nav is-hidden" aria-label="Subcarpetas"></nav>
-          <nav id="mediaStrip" class="media-strip is-hidden" aria-label="Tira de imágenes"></nav>
+          <div id="gallerySelectionBar" class="gallery-selection-bar" aria-hidden="true">
+            <span id="gallerySelectionCount">0 seleccionadas</span>
+            <button id="gallerySelectionCancel" type="button">Cancelar</button>
+            <button id="gallerySelectionDelete" class="danger" type="button">Eliminar</button>
+          </div>
+          <nav id="mediaStrip" class="media-strip is-hidden" aria-label="Tira de imágenes" tabindex="-1" aria-expanded="false"></nav>
 
           <button id="nextButton" class="nav-button next is-hidden" type="button" aria-label="Imagen siguiente" disabled hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
@@ -134,19 +139,9 @@
       <div id="sidebarScrim" class="sidebar-scrim" hidden></div>
       <aside id="appSidebar" class="app-sidebar" aria-label="Panel principal" aria-hidden="true">
         <div id="foldersPanel" class="sidebar-panel" data-sidebar-panel="folders">
-          <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
-            <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
-              <i class="iconoir-folder" aria-hidden="true"></i>
-              <span id="favoritePhotosTitle">Favoritos</span>
-              <span id="favoritePhotosCount" class="sidebar-count" aria-label="0 favoritos">0</span>
-            </button>
-          </section>
           <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
             <div class="recent-section-header">
-              <h3 id="recentFoldersTitle"><button id="foldersSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="foldersSectionContent">Carpetas <i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
-              <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
-                <i class="iconoir-trash" aria-hidden="true"></i>
-              </button>
+              <h3 id="recentFoldersTitle"><button id="foldersSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="foldersSectionContent"><i class="iconoir-folder" aria-hidden="true"></i><span>Carpetas</span><i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
             </div>
             <div id="foldersSectionContent" class="sidebar-section-content">
               <div class="sidebar-section-content-inner">
@@ -157,7 +152,7 @@
           </section>
           <section class="recent-section collections-section" aria-labelledby="collectionsTitle">
             <div class="recent-section-header">
-              <h3 id="collectionsTitle"><button id="collectionsSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="collectionsSectionContent">Colecciones <i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
+              <h3 id="collectionsTitle"><button id="collectionsSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="collectionsSectionContent"><i class="iconoir-bookmark" aria-hidden="true"></i><span>Colecciones</span><i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
               <button id="newCollectionButton" class="clear-recent-button" type="button" aria-label="Crear colección" title="Crear colección">
                 <i class="iconoir-plus" aria-hidden="true"></i>
               </button>
@@ -165,7 +160,7 @@
             <div id="collectionsSectionContent" class="sidebar-section-content">
               <div class="sidebar-section-content-inner">
                 <ol id="collectionsList" class="recent-list"></ol>
-                <p id="emptyCollections" class="empty-recent">Aún no hay colecciones.</p>
+                <p id="emptyCollections" class="empty-recent">Aún no hay colecciones personalizadas.</p>
               </div>
             </div>
           </section>
@@ -243,16 +238,6 @@
           <div class="confirm-dialog-actions">
             <button id="deleteConfirmCancelButton" class="button" type="button">Cancelar</button>
             <button id="deleteConfirmAcceptButton" class="button danger" type="button">Eliminar</button>
-          </div>
-        </div>
-      </div>
-      <div id="clearRecentConfirmDialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clearRecentConfirmTitle" aria-describedby="clearRecentConfirmDescription" aria-hidden="true">
-        <div class="confirm-dialog-panel">
-          <h2 id="clearRecentConfirmTitle">Limpiar carpetas recientes</h2>
-          <p id="clearRecentConfirmDescription">Se quitarán todas las carpetas guardadas de la lista de recientes. Esta acción no elimina los archivos originales.</p>
-          <div class="confirm-dialog-actions">
-            <button id="clearRecentConfirmCancelButton" class="button" type="button">Cancelar</button>
-            <button id="clearRecentConfirmAcceptButton" class="button danger" type="button">Limpiar</button>
           </div>
         </div>
       </div>

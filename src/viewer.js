@@ -320,6 +320,7 @@ function renderMediaStrip() {
     renderedMediaItems = state.images.map((media, index) => {
       const button = document.createElement("button");
       const preview = document.createElement(media.type === "video" ? "video" : "img");
+      const selector = document.createElement("input");
       const url = media.url || URL.createObjectURL(media.file);
 
       if (!media.url) {
@@ -340,8 +341,37 @@ function renderMediaStrip() {
         preview.loading = "eager";
         preview.decoding = "sync";
       }
-      button.append(preview);
-      button.addEventListener("click", () => selectImage(index));
+      selector.className = "media-strip-select";
+      selector.type = "checkbox";
+      selector.tabIndex = -1;
+      selector.setAttribute("aria-label", `Seleccionar ${media.name} para eliminar`);
+      selector.addEventListener("click", (event) => event.stopPropagation());
+      selector.addEventListener("change", (event) => {
+        state.gallerySelectionMode = true;
+        if (event.currentTarget.checked) state.gallerySelectedMedia.add(media);
+        else state.gallerySelectedMedia.delete(media);
+        button.classList.toggle("is-selected-for-delete", event.currentTarget.checked);
+        window.dispatchEvent(new Event("image-visor:gallery-selection-changed"));
+      });
+      button.append(preview, selector);
+      button.addEventListener("click", (event) => {
+        if (state.mediaStripExpanded) {
+          if (!state.gallerySelectionMode) {
+            selectImage(index);
+            window.dispatchEvent(new Event("image-visor:gallery-open-image"));
+            return;
+          }
+          if (event.detail > 1) return;
+          if (state.gallerySelectedMedia.has(media)) state.gallerySelectedMedia.delete(media);
+          else state.gallerySelectedMedia.add(media);
+          const selector = button.querySelector(".media-strip-select");
+          if (selector) selector.checked = state.gallerySelectedMedia.has(media);
+          window.dispatchEvent(new Event("image-visor:gallery-selection-changed"));
+          return;
+        }
+        if (state.gallerySelectedMedia.size > 0) return;
+        selectImage(index);
+      });
       mediaStrip.append(button);
       return { media, button };
     });
@@ -351,6 +381,9 @@ function renderMediaStrip() {
     const isActive = index === state.activeIndex;
     button.setAttribute("aria-pressed", String(isActive));
     button.classList.toggle("is-active", isActive);
+    button.classList.toggle("is-selected-for-delete", state.gallerySelectedMedia.has(state.images[index]));
+    const selector = button.querySelector(".media-strip-select");
+    if (selector) selector.checked = state.gallerySelectedMedia.has(state.images[index]);
   });
 
   const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
