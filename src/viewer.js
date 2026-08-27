@@ -1,4 +1,4 @@
-import { FAVORITES_FOLDER_PATH, SLIDESHOW_INTERVAL_MS } from "./constants.js";
+import { COLLECTIONS_FOLDER_PREFIX, FAVORITES_FOLDER_PATH, SLIDESHOW_INTERVAL_MS } from "./constants.js";
 import { state, clearActiveObjectUrl, clearFolderThumbnailObjectUrls, clearMediaThumbnailObjectUrls } from "./state.js";
 import {
   folderNav,
@@ -8,14 +8,13 @@ import {
   stage,
   photoFrame,
   fullscreenButton,
-  zoomOutButton,
-  zoomInButton,
   resetZoomButton,
   playButton,
   stopButton,
   shuffleButton,
   favoriteButton,
   deleteButton,
+  addToCollectionButton,
   previousButton,
   nextButton,
   activeImage,
@@ -26,11 +25,16 @@ import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-p
 import { getFavoriteKey, isFavorite } from "./favorites.js";
 import { applyImageAdjustments, renderImageAdjustmentControls, resetImageAdjustments } from "./image-adjustments.js";
 import { canDeleteMedia } from "./delete.js";
+import { getCollectionMedia } from "./collections.js";
+
+let renderedMediaItems = [];
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
   if (state.activeFolderPath === FAVORITES_FOLDER_PATH) {
     state.images = getAvailableFavorites();
+  } else if (state.activeFolderPath.startsWith(COLLECTIONS_FOLDER_PREFIX)) {
+    state.images = [...getCollectionMedia(state.activeFolderPath.slice(COLLECTIONS_FOLDER_PREFIX.length))];
   } else {
     state.images = state.activeFolderPath
       ? state.allMedia.filter((item) => isInsideFolder(item, state.activeFolderPath))
@@ -235,6 +239,7 @@ export async function renderActiveImage() {
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
   imageViewport.classList.toggle("has-video", Boolean(isVideo));
+  imageViewport.classList.toggle("is-playing", state.isPlaying);
   stage.classList.toggle("is-hidden", !hasImages);
   stage.classList.toggle("has-images", hasImages);
   document.body.classList.toggle("has-loaded-images", hasImages);
@@ -242,14 +247,13 @@ export async function renderActiveImage() {
   photoFrame.classList.toggle("is-landscape", false);
 
   fullscreenButton.disabled = !hasImages;
-  zoomOutButton.disabled = !hasImages || isVideo;
-  zoomInButton.disabled = !hasImages || isVideo;
   resetZoomButton.disabled = !hasImages || isVideo;
   playButton.disabled = !hasImages || state.isPlaying;
   stopButton.disabled = !hasImages || !state.isPlaying;
   shuffleButton.disabled = !hasImages || state.images.length < 2;
   favoriteButton.disabled = !hasImages || isVideo;
   deleteButton.disabled = !hasImages || !canDeleteMedia(activeMedia);
+  addToCollectionButton.disabled = !hasImages || isVideo;
   playButton.setAttribute("aria-pressed", String(state.isPlaying));
   playButton.classList.toggle("is-active", state.isPlaying);
   shuffleButton.setAttribute("aria-pressed", String(state.shuffleEnabled));
@@ -305,37 +309,52 @@ export async function renderActiveImage() {
 }
 
 function renderMediaStrip() {
-  clearMediaThumbnailObjectUrls();
-  mediaStrip.innerHTML = "";
   mediaStrip.classList.toggle("is-hidden", state.images.length === 0);
 
-  state.images.forEach((media, index) => {
-    const button = document.createElement("button");
-    const preview = document.createElement(media.type === "video" ? "video" : "img");
+  const mediaListChanged = renderedMediaItems.length !== state.images.length
+    || renderedMediaItems.some(({ media }, index) => media !== state.images[index]);
+
+  if (mediaListChanged) {
+    clearMediaThumbnailObjectUrls();
+    mediaStrip.replaceChildren();
+    renderedMediaItems = state.images.map((media, index) => {
+      const button = document.createElement("button");
+      const preview = document.createElement(media.type === "video" ? "video" : "img");
+      const url = media.url || URL.createObjectURL(media.file);
+
+      if (!media.url) {
+        state.mediaThumbnailObjectUrls.push(url);
+      }
+
+      button.className = "media-strip-item";
+      button.type = "button";
+      button.title = media.name;
+      button.setAttribute("aria-label", `Abrir ${media.name}`);
+      preview.src = url;
+      preview.alt = "";
+      preview.muted = true;
+      preview.playsInline = true;
+      if (media.type === "video") {
+        preview.preload = "metadata";
+      } else {
+        preview.loading = "eager";
+        preview.decoding = "sync";
+      }
+      button.append(preview);
+      button.addEventListener("click", () => selectImage(index));
+      mediaStrip.append(button);
+      return { media, button };
+    });
+  }
+
+  renderedMediaItems.forEach(({ button }, index) => {
     const isActive = index === state.activeIndex;
-    const url = media.url || URL.createObjectURL(media.file);
-
-    if (!media.url) {
-      state.mediaThumbnailObjectUrls.push(url);
-    }
-
-    button.className = "media-strip-item";
-    button.type = "button";
-    button.title = media.name;
-    button.setAttribute("aria-label", `Abrir ${media.name}`);
     button.setAttribute("aria-pressed", String(isActive));
     button.classList.toggle("is-active", isActive);
-    preview.src = url;
-    preview.alt = "";
-    preview.muted = true;
-    preview.playsInline = true;
-    button.append(preview);
-    button.addEventListener("click", () => selectImage(index));
-    mediaStrip.append(button);
   });
 
-  const activeItem = mediaStrip.querySelector(".is-active");
-  activeItem?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  renderedMediaItems[state.activeIndex]?.button.scrollIntoView({ block: "nearest", inline: "center", behavior: scrollBehavior });
 }
 
 export function updateFavoriteButton(media = state.images[state.activeIndex]) {
@@ -501,7 +520,17 @@ export async function handleImageDoubleClick(event) {
   }
 
   if (document.fullscreenElement) {
-    resetFullscreenZoom();
+    if (state.fullscreenZoom.active) {
+      resetFullscreenZoom();
+      return;
+    }
+
+    await toggleFullscreen();
+    return;
+  }
+
+  if (state.zoom !== 100) {
+    setZoom(100);
     return;
   }
 

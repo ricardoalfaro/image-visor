@@ -34,6 +34,8 @@ El proyecto separado del editor puede servir como referencia o cantera de codigo
 - [ ] Priorizar primeras tareas.
 - [x] Implementar primera mejora: controles basicos temporales de imagen.
 - [x] Navegacion rapida entre carpetas importadas desde el dock de miniaturas.
+- [x] Reforzar interaccion y accesibilidad: miniaturas reutilizables, confirmaciones con foco controlado, atajos compatibles con formularios y soporte para tactil/movimiento reducido.
+- [x] Colecciones locales persistentes: crear, renombrar, eliminar y alternar imágenes en listas personalizadas independientes de Favoritos.
 
 ## Ideas Candidatas
 
@@ -42,7 +44,7 @@ Estas ideas estan pendientes de definir. Se iran moviendo a secciones concretas 
 - [ ] Pendiente: usuario definira que funciones del editor quiere traer al visor.
 - [ ] Rediseño completo de la interfaz: pendiente de referencias y definicion precisa de alcance. El foco inicial seran los paneles y otras areas que se definiran cuando se aborde la tarea.
 - [x] Controles basicos temporales de imagen: habilitar ajustes como brillo, contraste u otros parametros simples mientras se visualiza una imagen. No deben persistir ni modificar archivos; son solo una ayuda momentanea durante la revision.
-- [ ] Eliminacion on demand de imagenes: permitir borrar imagenes mientras se revisan en el visor. Debe incluir confirmacion para evitar accidentes y definir claramente si aplica solo a archivos locales con permisos suficientes o tambien a flujos servidos por el backend local.
+- [x] Eliminacion on demand de imagenes: permite borrar desde el visor con confirmacion explicita. Funciona tanto con carpetas locales que conceden acceso de escritura como mediante el backend local; se deshabilita cuando la fuente no permite eliminar.
 - [ ] Lectura de archivos desde Google Drive: explorar capacidad para abrir imagenes y videos alojados en Google Drive. Pendiente definir autenticacion, permisos, seleccion de carpetas/archivos, cache local y diferencias frente al flujo local-first actual.
 - [ ] Grupos de carpetas en el panel: permitir organizar carpetas dentro del sidebar/panel mediante grupos. Pendiente definir si los grupos seran manuales, automaticos, por origen, por proyecto u otra logica.
 - [ ] Estado visible de origen desconectado: indicar en el panel cuando una carpeta ya no tiene conexion con su origen, por ejemplo si estaba en un disco externo o memoria flash que ya no esta conectada. Pendiente definir deteccion, estados visuales y acciones disponibles para reconectar, ocultar o eliminar la referencia.

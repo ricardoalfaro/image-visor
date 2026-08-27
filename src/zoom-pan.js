@@ -1,16 +1,17 @@
 import { state } from "./state.js";
-import { imageViewport, activeImage, zoomSelection, resetZoomButton } from "./dom.js";
+import { imageViewport, activeImage, zoomSelection, resetZoomButton, zoomSlider } from "./dom.js";
 import { isActiveVideo, getActiveMediaDimensions } from "./viewer.js";
 import { clamp, intersectRects } from "./utils.js";
 
 export function setZoom(nextZoom) {
-  state.zoom = Math.min(300, Math.max(25, nextZoom));
+  state.zoom = Math.min(500, Math.max(100, nextZoom));
   if (state.zoom <= 100) {
     state.panX = 0;
     state.panY = 0;
   }
 
   resetZoomButton.textContent = `${state.zoom}%`;
+  zoomSlider.value = String(state.zoom);
   applyImageTransform();
 }
 

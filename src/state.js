@@ -41,6 +41,8 @@ export const state = {
   favoriteKeys: new Set(),
   favoriteMedia: [],
   favoriteDbPromise: null,
+  collections: [],
+  collectionsDbPromise: null,
   recentDbPromise: null,
   recentFolderFiles: new Map(),
   noticeTimer: 0,

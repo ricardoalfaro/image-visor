@@ -1,12 +1,14 @@
 import { state } from "./src/state.js";
 import {
   folderInput, previousButton, nextButton, fullscreenButton,
-  playButton, stopButton, shuffleButton, zoomOutButton, zoomInButton,
+  playButton, stopButton, shuffleButton,
   resetZoomButton, themeToggleButton, closeViewerButton, sidebarToggleButton, menuButton, sortButton,
-  closeSidebarButton, sidebarScrim, clearRecentFoldersButton, imageViewport,
+  sidebarScrim, clearRecentFoldersButton, newCollectionButton, addToCollectionButton, foldersSectionToggle, collectionsSectionToggle, imageViewport,
   controls, activeImage, activeVideo, photoFrame, folderNav, mediaStrip,
   sidebarImportButton, favoriteButton, deleteButton, deleteConfirmDialog, deleteConfirmCancelButton, deleteConfirmAcceptButton,
-  adjustmentsButton, fullscreenAdjustmentsButton,
+  clearRecentConfirmDialog, clearRecentConfirmCancelButton, clearRecentConfirmAcceptButton,
+  newCollectionDialog, newCollectionName, newCollectionCancelButton, newCollectionAcceptButton,
+  collectionMenu, zoomPopover, zoomSlider, adjustmentsButton,
   adjustmentInputs, resetAdjustmentsButton
 } from "./src/dom.js";
 import {
@@ -21,11 +23,12 @@ import {
   setZoom, startImageDrag, dragImage, endImageDrag, resetFullscreenZoom
 } from "./src/zoom-pan.js";
 import {
-  cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites, renderSortOptions
+  cycleThemePreference, openSidebar, toggleSidebar, closeSidebar, setThemePreference, renderRecentFolders, renderFavorites, renderCollections, renderSortOptions, showNotice
 } from "./src/ui.js";
 import { loadRecentFolders, clearRecentFolders } from "./src/storage.js";
 import { loadFavorites, toggleFavorite } from "./src/favorites.js";
-import { openDeleteConfirm, closeDeleteConfirm, confirmDelete } from "./src/delete.js";
+import { openDeleteConfirm, closeDeleteConfirm, confirmDelete, trapDeleteDialogFocus } from "./src/delete.js";
+import { createCollection, isMediaInCollection, loadCollections, toggleMediaInCollection } from "./src/collections.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
 import {
   renderImageAdjustmentControls,
@@ -34,12 +37,106 @@ import {
 } from "./src/image-adjustments.js";
 
 let favoriteControlTimer = 0;
+let viewerControlsTimer = 0;
+let clearRecentFoldersTrigger = null;
+let pendingCollectionMedia = null;
+
+function openClearRecentFoldersConfirm() {
+  clearRecentFoldersTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  clearRecentConfirmDialog.setAttribute("aria-hidden", "false");
+  document.body.classList.add("has-open-dialog");
+  clearRecentConfirmCancelButton.focus();
+}
+
+function closeClearRecentFoldersConfirm(options = {}) {
+  clearRecentConfirmDialog.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("has-open-dialog");
+
+  if (options.restoreFocus !== false && clearRecentFoldersTrigger?.isConnected) {
+    clearRecentFoldersTrigger.focus();
+  }
+
+  clearRecentFoldersTrigger = null;
+}
+
+function trapClearRecentDialogFocus(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusableElements = [clearRecentConfirmCancelButton, clearRecentConfirmAcceptButton];
+  const currentIndex = focusableElements.indexOf(document.activeElement);
+  const nextIndex = event.shiftKey
+    ? (currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1)
+    : (currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1);
+
+  event.preventDefault();
+  focusableElements[nextIndex].focus();
+}
+
+function toggleSidebarSection(event) {
+  const toggle = event.currentTarget;
+  const section = toggle.closest(".recent-section");
+  const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+
+  toggle.setAttribute("aria-expanded", String(!isExpanded));
+  section?.classList.toggle("is-collapsed", isExpanded);
+}
+
+function openCollectionDialog(media = null) {
+  pendingCollectionMedia = media;
+  collectionMenu.classList.add("is-hidden");
+  addToCollectionButton.setAttribute("aria-expanded", "false");
+  newCollectionName.value = "";
+  newCollectionDialog.setAttribute("aria-hidden", "false");
+  document.body.classList.add("has-open-dialog");
+  newCollectionName.focus();
+}
+
+function closeCollectionDialog() {
+  pendingCollectionMedia = null;
+  newCollectionDialog.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("has-open-dialog");
+}
+
+function renderCollectionMenu() {
+  collectionMenu.replaceChildren();
+  state.collections.forEach((collection) => {
+    const item = document.createElement("button");
+    const isIncluded = isMediaInCollection(collection.id, state.images[state.activeIndex]);
+    item.type = "button";
+    item.setAttribute("role", "menuitem");
+    item.classList.toggle("is-selected", isIncluded);
+    item.append(document.createTextNode(collection.name));
+    if (isIncluded) {
+      const check = document.createElement("i");
+      check.className = "iconoir-check";
+      check.setAttribute("aria-hidden", "true");
+      item.append(check);
+    }
+    item.addEventListener("click", async () => {
+      const result = await toggleMediaInCollection(collection.id, state.images[state.activeIndex]);
+      collectionMenu.classList.add("is-hidden");
+      addToCollectionButton.setAttribute("aria-expanded", "false");
+      renderCollections();
+      showNotice(result === "added" ? `Agregada a “${collection.name}”.` : result === "removed" ? `Quitada de “${collection.name}”.` : "No se pudo actualizar la colección.", result ? "info" : "warning");
+    });
+    collectionMenu.append(item);
+  });
+  const createItem = document.createElement("button");
+  createItem.type = "button";
+  createItem.setAttribute("role", "menuitem");
+  createItem.textContent = "Nueva colección";
+  createItem.addEventListener("click", () => openCollectionDialog(state.images[state.activeIndex]));
+  collectionMenu.append(createItem);
+}
 
 function revealFullscreenFavorite() {
   if (!document.fullscreenElement || isActiveVideo()) {
     return;
   }
 
+  revealViewerControls();
   window.clearTimeout(favoriteControlTimer);
   imageViewport.classList.add("show-favorite-control");
   favoriteControlTimer = window.setTimeout(() => {
@@ -47,12 +144,33 @@ function revealFullscreenFavorite() {
   }, 1800);
 }
 
+function revealViewerControls() {
+  if (isActiveVideo()) {
+    return;
+  }
+
+  window.clearTimeout(viewerControlsTimer);
+  imageViewport.classList.add("show-overlay-controls");
+  viewerControlsTimer = window.setTimeout(() => {
+    imageViewport.classList.remove("show-overlay-controls");
+  }, 1800);
+}
+
 function handleFullscreenChange() {
   updateFullscreenButton();
   imageViewport.classList.remove("show-favorite-control");
+  imageViewport.classList.remove("show-overlay-controls");
   window.clearTimeout(favoriteControlTimer);
+  window.clearTimeout(viewerControlsTimer);
   favoriteControlTimer = 0;
   document.body.classList.remove("show-fullscreen-media-strip");
+
+  if (document.fullscreenElement) {
+    collectionMenu.classList.add("is-hidden");
+    zoomPopover.classList.add("is-hidden");
+    addToCollectionButton.setAttribute("aria-expanded", "false");
+    closeSidebar();
+  }
 }
 
 function handleFullscreenMediaStrip(event) {
@@ -104,12 +222,28 @@ function handleViewerOutsideClick(event) {
 
 function handleKeyboard(event) {
   if (document.body.classList.contains("has-open-dialog")) {
+    if (newCollectionDialog.getAttribute("aria-hidden") === "false") {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCollectionDialog();
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        newCollectionAcceptButton.click();
+      }
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
-      closeDeleteConfirm();
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      confirmDelete();
+      if (clearRecentConfirmDialog.getAttribute("aria-hidden") === "false") {
+        closeClearRecentFoldersConfirm();
+      } else {
+        closeDeleteConfirm();
+      }
+    } else if (clearRecentConfirmDialog.getAttribute("aria-hidden") === "false") {
+      trapClearRecentDialogFocus(event);
+    } else {
+      trapDeleteDialogFocus(event);
     }
     return;
   }
@@ -120,12 +254,22 @@ function handleKeyboard(event) {
     return;
   }
 
+  if (isFormControl(event.target)) {
+    return;
+  }
+
   if (!state.images.length) {
     if (event.key === "Enter" && canOpenFolderFromKeyboard(event)) {
       event.preventDefault();
       loadLocalFolder();
     }
 
+    return;
+  }
+
+  if (event.metaKey && (event.key === "Backspace" || event.key === "Delete")) {
+    event.preventDefault();
+    openDeleteConfirm();
     return;
   }
 
@@ -193,6 +337,11 @@ function handleKeyboard(event) {
   }
 }
 
+function isFormControl(target) {
+  return target instanceof Element
+    && Boolean(target.closest("input, select, textarea, [contenteditable='true']"));
+}
+
 function canOpenFolderFromKeyboard(event) {
   if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
     return false;
@@ -217,7 +366,6 @@ window.addEventListener("image-visor:open-recent-folder", (event) => {
   openRecentFolder(event.detail?.folderId);
 });
 sidebarImportButton.addEventListener("click", () => {
-  closeSidebar();
   loadLocalFolder();
 });
 previousButton.addEventListener("click", showPrevious);
@@ -240,6 +388,7 @@ favoriteButton.addEventListener("click", async () => {
   }
 });
 deleteButton.addEventListener("click", () => openDeleteConfirm());
+deleteButton.addEventListener("pointerdown", (event) => event.stopPropagation());
 deleteConfirmCancelButton.addEventListener("click", () => closeDeleteConfirm());
 deleteConfirmAcceptButton.addEventListener("click", () => confirmDelete());
 deleteConfirmDialog.addEventListener("click", (event) => {
@@ -247,9 +396,44 @@ deleteConfirmDialog.addEventListener("click", (event) => {
     closeDeleteConfirm();
   }
 });
-zoomOutButton.addEventListener("click", () => setZoom(state.zoom - 10));
-zoomInButton.addEventListener("click", () => setZoom(state.zoom + 10));
-resetZoomButton.addEventListener("click", () => setZoom(100));
+clearRecentFoldersButton.addEventListener("click", openClearRecentFoldersConfirm);
+foldersSectionToggle.addEventListener("click", toggleSidebarSection);
+collectionsSectionToggle.addEventListener("click", toggleSidebarSection);
+clearRecentConfirmCancelButton.addEventListener("click", () => closeClearRecentFoldersConfirm());
+clearRecentConfirmAcceptButton.addEventListener("click", async () => {
+  clearRecentConfirmAcceptButton.disabled = true;
+  try {
+    await clearRecentFolders();
+    closeClearRecentFoldersConfirm({ restoreFocus: false });
+    sidebarImportButton.focus();
+  } catch (error) {
+    showNotice("No se pudieron limpiar las carpetas recientes.", "error");
+  } finally {
+    clearRecentConfirmAcceptButton.disabled = false;
+  }
+});
+clearRecentConfirmDialog.addEventListener("click", (event) => {
+  if (event.target === clearRecentConfirmDialog) {
+    closeClearRecentFoldersConfirm();
+  }
+});
+newCollectionButton.addEventListener("click", () => openCollectionDialog());
+addToCollectionButton.addEventListener("click", () => {
+  renderCollectionMenu();
+  const isOpen = !collectionMenu.classList.toggle("is-hidden");
+  addToCollectionButton.setAttribute("aria-expanded", String(isOpen));
+});
+newCollectionCancelButton.addEventListener("click", closeCollectionDialog);
+newCollectionAcceptButton.addEventListener("click", async () => {
+  const collection = await createCollection(newCollectionName.value);
+  if (!collection) { showNotice("No se pudo crear la colección.", "warning"); return; }
+  if (pendingCollectionMedia) await toggleMediaInCollection(collection.id, pendingCollectionMedia);
+  renderCollections();
+  closeCollectionDialog();
+  showNotice("Colección creada.", "info");
+});
+resetZoomButton.addEventListener("click", () => zoomPopover.classList.toggle("is-hidden"));
+zoomSlider.addEventListener("input", () => setZoom(Number(zoomSlider.value)));
 themeToggleButton.addEventListener("click", cycleThemePreference);
 closeViewerButton.addEventListener("click", closeViewer);
 sidebarToggleButton.addEventListener("click", () => {
@@ -265,18 +449,6 @@ adjustmentsButton.addEventListener("click", () => {
   renderImageAdjustmentControls();
 });
 sortButton.addEventListener("click", () => toggleSidebar("sort"));
-fullscreenAdjustmentsButton.addEventListener("click", (event) => {
-  event.stopPropagation();
-  toggleSidebar("adjustments");
-  renderImageAdjustmentControls();
-  revealFullscreenFavorite();
-});
-fullscreenAdjustmentsButton.addEventListener("pointerdown", (event) => {
-  event.stopPropagation();
-});
-closeSidebarButton.addEventListener("click", () => closeSidebar());
-sidebarScrim.addEventListener("click", closeSidebar);
-clearRecentFoldersButton.addEventListener("click", clearRecentFolders);
 resetAdjustmentsButton.addEventListener("click", resetImageAdjustments);
 adjustmentInputs.forEach((input) => {
   input.addEventListener("input", () => {
@@ -286,6 +458,7 @@ adjustmentInputs.forEach((input) => {
 imageViewport.addEventListener("pointerdown", startImageDrag);
 imageViewport.addEventListener("pointermove", dragImage);
 imageViewport.addEventListener("pointermove", revealFullscreenFavorite);
+imageViewport.addEventListener("pointermove", revealViewerControls);
 imageViewport.addEventListener("pointerup", endImageDrag);
 imageViewport.addEventListener("pointercancel", endImageDrag);
 imageViewport.addEventListener("lostpointercapture", endImageDrag);
@@ -315,8 +488,10 @@ try {
 setThemePreference(initialTheme, { persist: false });
 await loadRecentFolders();
 await loadFavorites();
+await loadCollections();
 renderRecentFolders();
 renderFavorites();
+renderCollections();
 renderImageAdjustmentControls();
 renderSortOptions();
 initializeOnboarding();

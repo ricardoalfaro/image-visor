@@ -3,11 +3,14 @@ import {
   deleteConfirmDialog,
   deleteConfirmName,
   deleteConfirmAcceptButton,
+  deleteConfirmCancelButton,
 } from "./dom.js";
 import { showNotice, renderFavorites } from "./ui.js";
 import { isFavorite, toggleFavorite } from "./favorites.js";
 import { getFoldersFromMedia } from "./utils.js";
 import { applyFolderFilter, renderActiveImage } from "./viewer.js";
+
+let deleteTrigger = null;
 
 export function canDeleteMedia(media) {
   if (!media) {
@@ -30,16 +33,38 @@ export function openDeleteConfirm() {
   }
 
   state.pendingDeleteMedia = media;
+  deleteTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   deleteConfirmName.textContent = media.name;
   deleteConfirmDialog.setAttribute("aria-hidden", "false");
   document.body.classList.add("has-open-dialog");
-  deleteConfirmAcceptButton.focus();
+  deleteConfirmCancelButton.focus();
 }
 
-export function closeDeleteConfirm() {
+export function closeDeleteConfirm(options = {}) {
   state.pendingDeleteMedia = null;
   deleteConfirmDialog.setAttribute("aria-hidden", "true");
   document.body.classList.remove("has-open-dialog");
+
+  if (options.restoreFocus !== false && deleteTrigger?.isConnected) {
+    deleteTrigger.focus();
+  }
+
+  deleteTrigger = null;
+}
+
+export function trapDeleteDialogFocus(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusableElements = [deleteConfirmCancelButton, deleteConfirmAcceptButton];
+  const currentIndex = focusableElements.indexOf(document.activeElement);
+  const nextIndex = event.shiftKey
+    ? (currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1)
+    : (currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1);
+
+  event.preventDefault();
+  focusableElements[nextIndex].focus();
 }
 
 export async function confirmDelete() {
@@ -61,7 +86,7 @@ export async function confirmDelete() {
   }
 
   deleteConfirmAcceptButton.disabled = false;
-  closeDeleteConfirm();
+  closeDeleteConfirm({ restoreFocus: false });
 
   const deletedIndex = state.images.indexOf(media);
 

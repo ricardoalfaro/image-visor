@@ -4,7 +4,7 @@ import {
   folderInput,
   sidebarImportButton,
 } from "./dom.js";
-import { showNotice, hideNotice, closeSidebar, renderFavorites } from "./ui.js";
+import { showNotice, hideNotice, renderFavorites } from "./ui.js";
 import { getLocalRelativePath, getBrowserSelectedFolderName, getFolderPath, getTopLevelFolder, isSupportedMedia, getMediaType, createRecentFolderToken } from "./utils.js";
 import { 
   storeBrowserFolderFiles,
@@ -141,7 +141,6 @@ export async function openRecentFolder(folderId) {
 
   if (state.recentFolderFiles.has(recentFolder.id)) {
     const cachedFolder = state.recentFolderFiles.get(recentFolder.id);
-    closeSidebar();
     hideNotice();
     await loadLocalFiles(cachedFolder.files, cachedFolder.name || recentFolder.name, recentFolder.id);
     await rememberRecentFolder(recentFolder);
@@ -152,7 +151,6 @@ export async function openRecentFolder(folderId) {
     const storedFolder = await getStoredBrowserFolderFiles(recentFolder.id);
 
     if (storedFolder?.files?.length) {
-      closeSidebar();
       hideNotice();
       state.recentFolderFiles.set(recentFolder.id, storedFolder);
       await loadLocalFiles(storedFolder.files, storedFolder.name || recentFolder.name, recentFolder.id);
@@ -164,7 +162,6 @@ export async function openRecentFolder(folderId) {
   }
 
   if (recentFolder.source === "server" && recentFolder.path) {
-    closeSidebar();
     hideNotice();
 
     try {
@@ -178,7 +175,6 @@ export async function openRecentFolder(folderId) {
 
   if (!recentFolder.canReopen) {
     showNotice("Esta carpeta no pudo conservarse despues del refresh. Elige la carpeta nuevamente para actualizarla.", "warning");
-    closeSidebar();
     return;
   }
 
@@ -198,7 +194,6 @@ export async function openRecentFolder(folderId) {
       return;
     }
 
-    closeSidebar();
     hideNotice();
     const files = await collectDirectoryFiles(directoryHandle);
     await loadLocalFiles(files, directoryHandle.name || recentFolder.name, recentFolder.id, directoryHandle);
@@ -221,7 +216,6 @@ export async function refreshRecentFolder(folderId) {
     return;
   }
 
-  closeSidebar();
   hideNotice();
 
   try {

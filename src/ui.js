@@ -9,8 +9,6 @@ import {
   menuButton,
   adjustmentsButton,
   sortButton,
-  fullscreenAdjustmentsButton,
-  sidebarTitle,
   foldersPanel,
   adjustmentsPanel,
   sortPanel,
@@ -21,11 +19,14 @@ import {
   clearRecentFoldersButton,
   favoritePhotosCount,
   favoriteFolderButton,
+  collectionsList,
+  emptyCollections,
   sortOptionButtons
 } from "./dom.js";
 import { openRecentFolder, refreshRecentFolder } from "./file-loader.js";
 import { removeRecentFolder } from "./storage.js";
-import { FAVORITES_FOLDER_PATH } from "./constants.js";
+import { COLLECTIONS_FOLDER_PREFIX, FAVORITES_FOLDER_PATH } from "./constants.js";
+import { deleteCollection, renameCollection } from "./collections.js";
 import { getAvailableFavorites, selectFolder, applyFolderFilter } from "./viewer.js";
 
 const SIDEBAR_PANELS = {
@@ -74,8 +75,6 @@ export function openSidebar(panel = "folders") {
   state.activeSidebarPanel = nextPanel;
   document.body.classList.add("has-open-sidebar");
   appSidebar.setAttribute("aria-hidden", "false");
-  sidebarTitle.textContent = SIDEBAR_PANELS[nextPanel].title;
-
   Object.entries(SIDEBAR_PANELS).forEach(([key, { element, trigger }]) => {
     const isActive = key === nextPanel;
     element.classList.toggle("is-hidden", !isActive);
@@ -87,8 +86,6 @@ export function openSidebar(panel = "folders") {
     renderSortOptions();
   }
 
-  fullscreenAdjustmentsButton.setAttribute("aria-expanded", String(nextPanel === "adjustments"));
-  fullscreenAdjustmentsButton.setAttribute("aria-pressed", String(nextPanel === "adjustments"));
   sidebarToggleButton.setAttribute("aria-expanded", "true");
   sidebarScrim.hidden = false;
 }
@@ -114,8 +111,6 @@ export function closeSidebar() {
     trigger.setAttribute("aria-pressed", "false");
   });
 
-  fullscreenAdjustmentsButton.setAttribute("aria-expanded", "false");
-  fullscreenAdjustmentsButton.setAttribute("aria-pressed", "false");
   sidebarToggleButton.setAttribute("aria-expanded", "false");
   sidebarScrim.hidden = true;
 }
@@ -229,8 +224,71 @@ export function renderFavorites() {
   favoriteFolderButton.setAttribute("aria-label", `Abrir Favoritos, ${favorites.length} fotos`);
 }
 
+export function renderCollections() {
+  collectionsList.innerHTML = "";
+  emptyCollections.classList.toggle("is-hidden", state.collections.length > 0);
+
+  state.collections.forEach((collection) => {
+    const item = document.createElement("li");
+    const openButton = document.createElement("button");
+    const renameButton = document.createElement("button");
+    const removeButton = document.createElement("button");
+    const icon = document.createElement("i");
+    const label = document.createElement("span");
+    const count = document.createElement("span");
+
+    item.className = "recent-folder-item";
+    openButton.className = "recent-folder-button";
+    openButton.type = "button";
+    openButton.title = `${collection.name}, ${collection.media.length} fotos`;
+    openButton.setAttribute("aria-label", `Abrir colección ${collection.name}, ${collection.media.length} fotos`);
+    icon.className = "iconoir-collection";
+    icon.setAttribute("aria-hidden", "true");
+    label.className = "recent-folder-name";
+    label.textContent = collection.name;
+    count.className = "recent-folder-count";
+    count.textContent = String(collection.media.length);
+    count.setAttribute("aria-label", `${collection.media.length} fotos`);
+    openButton.append(icon, label, count);
+    openButton.addEventListener("click", async () => {
+      await selectFolder(`${COLLECTIONS_FOLDER_PREFIX}${collection.id}`);
+    });
+
+    renameButton.className = "refresh-recent-button";
+    renameButton.type = "button";
+    renameButton.title = `Renombrar ${collection.name}`;
+    renameButton.setAttribute("aria-label", renameButton.title);
+    renameButton.innerHTML = '<i class="iconoir-edit-pencil" aria-hidden="true"></i>';
+    renameButton.addEventListener("click", async () => {
+      const name = window.prompt("Nuevo nombre de la colección:", collection.name);
+      if (name === null || !name.trim()) return;
+      if (!await renameCollection(collection.id, name)) {
+        showNotice("No se pudo renombrar la colección. Revisa que el nombre no esté repetido.", "warning");
+        return;
+      }
+      renderCollections();
+    });
+
+    removeButton.className = "remove-recent-button";
+    removeButton.type = "button";
+    removeButton.title = `Eliminar colección ${collection.name}`;
+    removeButton.setAttribute("aria-label", removeButton.title);
+    removeButton.innerHTML = '<i class="iconoir-trash" aria-hidden="true"></i>';
+    removeButton.addEventListener("click", async () => {
+      if (!window.confirm(`¿Eliminar la colección “${collection.name}”? Los archivos originales no se eliminarán.`)) return;
+      if (!await deleteCollection(collection.id)) {
+        showNotice("No se pudo eliminar la colección.", "error");
+        return;
+      }
+      renderCollections();
+    });
+
+    item.append(openButton, renameButton, removeButton);
+    collectionsList.append(item);
+  });
+}
+
 favoriteFolderButton.addEventListener("click", async () => {
-  closeSidebar();
   await selectFolder(FAVORITES_FOLDER_PATH);
 });
 

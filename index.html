@@ -20,12 +20,7 @@
       <header class="app-header">
         <div class="app-brand">Image Viewer Pro</div>
         <div class="app-header-actions">
-          <button id="sidebarImportButton" class="header-import-button" type="button" aria-label="Importar una carpeta" title="Importar una carpeta">Importar carpeta</button>
-          <button id="themeToggleButton" class="icon-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
-            <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
-            <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
-            <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
-          </button>
+          <button id="sidebarImportButton" class="header-import-button" type="button" aria-label="Importar una carpeta" title="Importar una carpeta"><i class="iconoir-media-image" aria-hidden="true"></i><span>Importar</span></button>
         </div>
       </header>
       <nav class="app-rail" aria-label="Panel principal">
@@ -41,6 +36,11 @@
         </button>
         <button id="sortButton" class="icon-button rail-button" type="button" aria-label="Ordenar" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Ordenar">
           <i class="iconoir-sort" aria-hidden="true"></i>
+        </button>
+        <button id="themeToggleButton" class="icon-button rail-button theme-toggle" type="button" aria-label="Modo automático" title="Cambiar tema">
+          <svg class="theme-icon" data-theme-icon="light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l1.4 1.4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="auto" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>
+          <svg class="theme-icon" data-theme-icon="dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"></path></svg>
         </button>
       </nav>
       <section class="viewer-layout" aria-label="Visualizador de imágenes">
@@ -77,21 +77,26 @@
             <div id="imageViewport" class="image-viewport is-hidden">
               <img id="activeImage" alt="">
               <video id="activeVideo" class="is-hidden" controls playsinline></video>
-              <div class="image-overlay" aria-hidden="true">
-                <span id="activePosition" class="overlay-text overlay-right"></span>
+              <div class="image-overlay">
+                <span id="activePosition" class="overlay-text"></span>
+                <button id="deleteButton" class="icon-button delete-button overlay-delete-button" type="button" disabled aria-label="Eliminar archivo">
+                  <i class="iconoir-trash" aria-hidden="true"></i>
+                </button>
               </div>
               <div id="zoomSelection" class="zoom-selection is-hidden" aria-hidden="true"></div>
-              <button id="fullscreenAdjustmentsButton" class="icon-button fullscreen-adjustments-button" type="button" aria-label="Abrir controles de imagen" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false">
-                <i class="iconoir-settings" aria-hidden="true"></i>
-              </button>
               <div class="controls" aria-label="Controles del visualizador">
-                <div class="control-group control-group-primary">
+                <div class="control-group control-group-top-right">
                   <button id="favoriteButton" class="icon-button favorite-button" type="button" disabled aria-label="Agregar a favoritos" aria-pressed="false">
                     <i class="iconoir-star" aria-hidden="true"></i>
                   </button>
-                  <button id="deleteButton" class="icon-button delete-button" type="button" disabled aria-label="Eliminar archivo">
-                    <i class="iconoir-trash" aria-hidden="true"></i>
-                  </button>
+                  <div class="collection-menu-wrap">
+                    <button id="addToCollectionButton" class="icon-button" type="button" disabled aria-label="Agregar a una colección" aria-expanded="false" aria-controls="collectionMenu">
+                      <i class="iconoir-plus" aria-hidden="true"></i>
+                    </button>
+                    <div id="collectionMenu" class="collection-menu is-hidden" role="menu" aria-label="Agregar a colección"></div>
+                  </div>
+                </div>
+                <div class="control-group control-group-bottom-left">
                   <button id="playButton" class="icon-button" type="button" disabled aria-label="Reproducir">
                     <i class="iconoir-play-solid" aria-hidden="true"></i>
                   </button>
@@ -102,14 +107,11 @@
                     <i class="iconoir-shuffle" aria-hidden="true"></i>
                   </button>
                 </div>
-                <div class="control-group control-group-tools">
-                  <button id="zoomOutButton" class="icon-button" type="button" disabled aria-label="Alejar">
-                    <i class="iconoir-zoom-out" aria-hidden="true"></i>
-                  </button>
+                <div class="control-group control-group-bottom-right">
                   <button id="resetZoomButton" class="button zoom-value" type="button" disabled>100%</button>
-                  <button id="zoomInButton" class="icon-button" type="button" disabled aria-label="Acercar">
-                    <i class="iconoir-zoom-in" aria-hidden="true"></i>
-                  </button>
+                  <div id="zoomPopover" class="zoom-popover is-hidden">
+                    <input id="zoomSlider" type="range" min="100" max="500" value="100" step="5" orient="vertical" aria-label="Nivel de zoom">
+                  </div>
                   <button id="fullscreenButton" class="icon-button" type="button" disabled aria-label="Pantalla completa">
                     <i class="iconoir-expand" aria-hidden="true"></i>
                   </button>
@@ -131,12 +133,6 @@
 
       <div id="sidebarScrim" class="sidebar-scrim" hidden></div>
       <aside id="appSidebar" class="app-sidebar" aria-label="Panel principal" aria-hidden="true">
-        <div class="sidebar-header">
-          <h2 id="sidebarTitle">Carpetas</h2>
-          <button id="closeSidebarButton" class="icon-button" type="button" aria-label="Contraer panel">
-            <i class="iconoir-xmark" aria-hidden="true"></i>
-          </button>
-        </div>
         <div id="foldersPanel" class="sidebar-panel" data-sidebar-panel="folders">
           <section class="favorite-folder-section" aria-labelledby="favoritePhotosTitle">
             <button id="favoriteFolderButton" class="favorite-folder-button" type="button" disabled>
@@ -147,13 +143,31 @@
           </section>
           <section class="recent-section recent-folders-section" aria-labelledby="recentFoldersTitle">
             <div class="recent-section-header">
-              <h3 id="recentFoldersTitle">Carpetas</h3>
+              <h3 id="recentFoldersTitle"><button id="foldersSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="foldersSectionContent">Carpetas <i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
               <button id="clearRecentFoldersButton" class="clear-recent-button" type="button" aria-label="Limpiar carpetas" title="Limpiar carpetas">
                 <i class="iconoir-trash" aria-hidden="true"></i>
               </button>
             </div>
-            <ol id="recentFoldersList" class="recent-list"></ol>
-            <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
+            <div id="foldersSectionContent" class="sidebar-section-content">
+              <div class="sidebar-section-content-inner">
+                <ol id="recentFoldersList" class="recent-list"></ol>
+                <p id="emptyRecentFolders" class="empty-recent">Aun no hay carpetas.</p>
+              </div>
+            </div>
+          </section>
+          <section class="recent-section collections-section" aria-labelledby="collectionsTitle">
+            <div class="recent-section-header">
+              <h3 id="collectionsTitle"><button id="collectionsSectionToggle" class="sidebar-section-toggle" type="button" aria-expanded="true" aria-controls="collectionsSectionContent">Colecciones <i class="iconoir-nav-arrow-down" aria-hidden="true"></i></button></h3>
+              <button id="newCollectionButton" class="clear-recent-button" type="button" aria-label="Crear colección" title="Crear colección">
+                <i class="iconoir-plus" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div id="collectionsSectionContent" class="sidebar-section-content">
+              <div class="sidebar-section-content-inner">
+                <ol id="collectionsList" class="recent-list"></ol>
+                <p id="emptyCollections" class="empty-recent">Aún no hay colecciones.</p>
+              </div>
+            </div>
           </section>
         </div>
         <div id="adjustmentsPanel" class="sidebar-panel is-hidden" data-sidebar-panel="adjustments">
@@ -222,13 +236,34 @@
           </section>
         </div>
       </aside>
-      <div id="deleteConfirmDialog" class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-hidden="true">
+      <div id="deleteConfirmDialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-describedby="deleteConfirmDescription" aria-hidden="true">
         <div class="confirm-dialog-panel">
           <h2 id="deleteConfirmTitle">Eliminar archivo</h2>
-          <p>Se eliminará <strong id="deleteConfirmName"></strong> de la carpeta de origen. Esta acción no se puede deshacer.</p>
+          <p id="deleteConfirmDescription">Se eliminará <strong id="deleteConfirmName"></strong> de la carpeta de origen. Esta acción no se puede deshacer.</p>
           <div class="confirm-dialog-actions">
             <button id="deleteConfirmCancelButton" class="button" type="button">Cancelar</button>
             <button id="deleteConfirmAcceptButton" class="button danger" type="button">Eliminar</button>
+          </div>
+        </div>
+      </div>
+      <div id="clearRecentConfirmDialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clearRecentConfirmTitle" aria-describedby="clearRecentConfirmDescription" aria-hidden="true">
+        <div class="confirm-dialog-panel">
+          <h2 id="clearRecentConfirmTitle">Limpiar carpetas recientes</h2>
+          <p id="clearRecentConfirmDescription">Se quitarán todas las carpetas guardadas de la lista de recientes. Esta acción no elimina los archivos originales.</p>
+          <div class="confirm-dialog-actions">
+            <button id="clearRecentConfirmCancelButton" class="button" type="button">Cancelar</button>
+            <button id="clearRecentConfirmAcceptButton" class="button danger" type="button">Limpiar</button>
+          </div>
+        </div>
+      </div>
+      <div id="newCollectionDialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="newCollectionTitle" aria-hidden="true">
+        <div class="confirm-dialog-panel">
+          <h2 id="newCollectionTitle">Nueva colección</h2>
+          <label class="collection-name-field" for="newCollectionName">Nombre</label>
+          <input id="newCollectionName" type="text" maxlength="80" autocomplete="off">
+          <div class="confirm-dialog-actions">
+            <button id="newCollectionCancelButton" class="button" type="button">Cancelar</button>
+            <button id="newCollectionAcceptButton" class="button primary" type="button">Crear</button>
           </div>
         </div>
       </div>
