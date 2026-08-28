@@ -287,6 +287,9 @@ export async function renderActiveImage() {
     resetImageAdjustments();
     activeVideo.autoplay = true;
     activeVideo.loop = false;
+    activeVideo.controls = true;
+    activeVideo.preload = "auto";
+    activeVideo.playsInline = true;
     activeVideo.src = mediaUrl;
     activeVideo.load();
     playActiveVideo();

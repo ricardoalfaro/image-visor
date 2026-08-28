@@ -76,7 +76,7 @@ export function renameRecentFolder(folderId, name) {
 
 async function hydrateStoredFolderCounts() {
   for (const folder of state.recentFolders) {
-    if (Number.isInteger(folder.mediaCount) || folder.source !== "browser" || !folder.canReopen) {
+    if (folder.source !== "browser" || !folder.canReopen) {
       continue;
     }
 
@@ -85,9 +85,18 @@ async function hydrateStoredFolderCounts() {
       continue;
     }
 
-    folder.mediaCount = storedFolder.files.filter((item) => (
+    const preview = storedFolder.files.find((item) => (
       isSupportedMedia(item.file) && getMediaType(item.file) === "image"
-    )).length;
+    ));
+    if (preview) {
+      state.recentFolderPreviews.set(folder.id, preview);
+    }
+
+    if (!Number.isInteger(folder.mediaCount)) {
+      folder.mediaCount = storedFolder.files.filter((item) => (
+        isSupportedMedia(item.file) && getMediaType(item.file) === "image"
+      )).length;
+    }
   }
 }
 

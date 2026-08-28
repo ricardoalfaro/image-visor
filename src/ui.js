@@ -154,8 +154,10 @@ function getThemeLabel(theme) {
 }
 
 export function renderRecentFolders() {
+  for (const objectUrl of state.recentFolderCoverObjectUrls.values()) URL.revokeObjectURL(objectUrl);
+  state.recentFolderCoverObjectUrls.clear();
   recentFoldersList.innerHTML = "";
-  emptyRecentFolders.classList.toggle("is-hidden", state.recentFolders.length > 0);
+  emptyRecentFolders.classList.add("is-hidden");
 
   state.recentFolders.forEach((folder) => {
     const item = document.createElement("li");
@@ -176,8 +178,17 @@ export function renderRecentFolders() {
     const displayName = folder.customName || folder.name;
     button.title = `${displayName}, ${getFolderPhotoCountLabel(folder)}`;
     button.setAttribute("aria-label", button.title);
-    icon.className = "iconoir-folder";
-    icon.setAttribute("aria-hidden", "true");
+    const preview = state.recentFolderPreviews.get(folder.id);
+    const previewUrl = preview?.url || (preview?.file instanceof Blob ? URL.createObjectURL(preview.file) : "");
+    if (previewUrl) {
+      if (!preview.url) state.recentFolderCoverObjectUrls.set(folder.id, previewUrl);
+      icon.className = "collection-cover";
+      icon.style.backgroundImage = `url("${previewUrl}")`;
+      icon.setAttribute("aria-label", `Portada de ${displayName}`);
+    } else {
+      icon.className = "iconoir-folder";
+      icon.setAttribute("aria-hidden", "true");
+    }
     label.className = "recent-folder-name";
     label.textContent = displayName;
     count.className = "recent-folder-count";

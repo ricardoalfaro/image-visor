@@ -12,6 +12,7 @@ export const state = {
   sourceLabel: "Carpeta local",
   activeRecentFolderId: "",
   recentFolderPreviews: new Map(),
+  recentFolderCoverObjectUrls: new Map(),
   collectionCoverObjectUrls: new Map(),
   mediaStripExpanded: false,
   gallerySelectedMedia: new Set(),

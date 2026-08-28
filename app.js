@@ -3,7 +3,7 @@ import {
   folderInput, previousButton, nextButton, fullscreenButton,
   playButton, stopButton, shuffleButton,
   resetZoomButton, themeToggleButton, closeViewerButton, sidebarToggleButton, menuButton, sortButton,
-  sidebarScrim, newCollectionButton, addToCollectionButton, foldersSectionToggle, collectionsSectionToggle, imageViewport,
+  sidebarScrim, addToCollectionButton, foldersSectionToggle, collectionsSectionToggle, imageViewport,
   controls, activeImage, activeVideo, photoFrame, folderNav, mediaStrip,
   gallerySelectionBar, gallerySelectionCount, gallerySelectionCancel, gallerySelectionDelete,
   sidebarImportButton, favoriteButton, deleteButton, deleteConfirmDialog, deleteConfirmCancelButton, deleteConfirmAcceptButton,
@@ -208,14 +208,9 @@ function handleFullscreenMediaStrip(event) {
 }
 
 function initializeOnboarding() {
-  let hasSeenHomeCta = false;
-
   try {
-    hasSeenHomeCta = localStorage.getItem(HOME_CTA_SEEN_KEY) === "true";
     localStorage.setItem(HOME_CTA_SEEN_KEY, "true");
   } catch (error) {}
-
-  window.setTimeout(() => openSidebar("folders"), hasSeenHomeCta ? 350 : 2600);
 }
 
 function handleViewerOutsideClick(event) {
@@ -447,7 +442,6 @@ deleteConfirmDialog.addEventListener("click", (event) => {
 });
 foldersSectionToggle.addEventListener("click", toggleSidebarSection);
 collectionsSectionToggle.addEventListener("click", toggleSidebarSection);
-newCollectionButton.addEventListener("click", () => openCollectionDialog());
 addToCollectionButton.addEventListener("click", () => {
   renderCollectionMenu();
   const isOpen = !collectionMenu.classList.toggle("is-hidden");
@@ -497,6 +491,20 @@ controls.addEventListener("click", (event) => event.stopPropagation());
 controls.addEventListener("pointerdown", (event) => event.stopPropagation());
 activeImage.addEventListener("load", updateFrameOrientation);
 activeVideo.addEventListener("loadedmetadata", updateFrameOrientation);
+activeVideo.addEventListener("canplay", () => {
+  if (isActiveVideo() && activeVideo.paused) {
+    activeVideo.play().catch(() => {
+      activeVideo.muted = true;
+      activeVideo.play().catch(() => {});
+    });
+  }
+});
+activeVideo.addEventListener("pointerup", () => {
+  if (isActiveVideo() && activeVideo.paused) activeVideo.play().catch(() => {});
+});
+activeVideo.addEventListener("error", () => {
+  if (isActiveVideo()) showNotice("No se pudo reproducir este video en el navegador.", "warning");
+});
 activeVideo.addEventListener("ended", handleVideoEnded);
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);

@@ -53,7 +53,6 @@ export const recentFoldersList = document.querySelector("#recentFoldersList");
 export const emptyRecentFolders = document.querySelector("#emptyRecentFolders");
 export const sortOptionButtons = Array.from(document.querySelectorAll("[data-sort-value]"));
 export const sidebarImportButton = document.querySelector("#sidebarImportButton");
-export const newCollectionButton = document.querySelector("#newCollectionButton");
 export const collectionsList = document.querySelector("#collectionsList");
 export const emptyCollections = document.querySelector("#emptyCollections");
 export const foldersSectionToggle = document.querySelector("#foldersSectionToggle");
