@@ -56,7 +56,7 @@ const server = http.createServer(async (request, response) => {
     }
 
     if (requestUrl.pathname === "/media") {
-      await sendMediaFile(requestUrl.searchParams.get("path"), response);
+      await sendMediaFile(requestUrl.searchParams.get("path"), request, response);
       return;
     }
 
@@ -171,7 +171,7 @@ async function collectMediaFiles(rootPath, currentPath = rootPath) {
       name: entry.name,
       path: relativePath,
       type: getMediaType(entryPath),
-      url: `/media?path=${encodeURIComponent(entryPath)}`,
+      url: `/media?path=${encodeURIComponent(entryPath)}&v=${Math.trunc(stat.mtimeMs)}`,
       lastModified: stat.mtimeMs,
     });
   }
@@ -187,7 +187,7 @@ function getMediaType(filePath) {
   return VIDEO_EXTENSION_PATTERN.test(filePath) ? "video" : "image";
 }
 
-async function sendMediaFile(filePath, response) {
+async function sendMediaFile(filePath, request, response) {
   if (!filePath) {
     sendJson(response, 400, { error: "Missing media path" });
     return;
@@ -200,7 +200,11 @@ async function sendMediaFile(filePath, response) {
     return;
   }
 
-  await sendFile(targetPath, response);
+  await sendFile(targetPath, response, {
+    rangeHeader: request.headers.range,
+    cacheControl: "private, max-age=86400",
+    method: request.method,
+  });
 }
 
 async function deleteMediaFile(filePath, response) {
@@ -241,7 +245,7 @@ function isAllowedMediaPath(filePath) {
   return false;
 }
 
-async function sendFile(filePath, response) {
+async function sendFile(filePath, response, options = {}) {
   let stat;
 
   try {
@@ -260,11 +264,84 @@ async function sendFile(filePath, response) {
     return;
   }
 
-  response.writeHead(200, {
-    "Content-Length": stat.size,
-    "Content-Type": MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream",
-  });
+  const contentType = MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream";
+  const headers = {
+    "Accept-Ranges": "bytes",
+    "Cache-Control": options.cacheControl || "no-cache",
+    "Content-Type": contentType,
+    "Last-Modified": stat.mtime.toUTCString(),
+  };
+  const range = parseByteRange(options.rangeHeader, stat.size);
+
+  if (range === null) {
+    response.writeHead(416, {
+      ...headers,
+      "Content-Range": `bytes */${stat.size}`,
+    });
+    response.end();
+    return;
+  }
+
+  if (range) {
+    headers["Content-Length"] = range.end - range.start + 1;
+    headers["Content-Range"] = `bytes ${range.start}-${range.end}/${stat.size}`;
+    response.writeHead(206, headers);
+
+    if (options.method === "HEAD") {
+      response.end();
+      return;
+    }
+
+    fs.createReadStream(filePath, range).pipe(response);
+    return;
+  }
+
+  headers["Content-Length"] = stat.size;
+  response.writeHead(200, headers);
+
+  if (options.method === "HEAD") {
+    response.end();
+    return;
+  }
+
   fs.createReadStream(filePath).pipe(response);
+}
+
+function parseByteRange(rangeHeader, fileSize) {
+  if (!rangeHeader) {
+    return undefined;
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match || fileSize <= 0) {
+    return null;
+  }
+
+  const [, startText, endText] = match;
+  if (!startText && !endText) {
+    return null;
+  }
+
+  let start;
+  let end;
+
+  if (!startText) {
+    const suffixLength = Number(endText);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+      return null;
+    }
+    start = Math.max(fileSize - suffixLength, 0);
+    end = fileSize - 1;
+  } else {
+    start = Number(startText);
+    end = endText ? Number(endText) : fileSize - 1;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start >= fileSize || end < start) {
+      return null;
+    }
+    end = Math.min(end, fileSize - 1);
+  }
+
+  return { start, end };
 }
 
 function sendJson(response, statusCode, payload) {

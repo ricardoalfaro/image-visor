@@ -28,6 +28,27 @@ import { canDeleteMedia } from "./delete.js";
 import { getCollectionMedia } from "./collections.js";
 
 let renderedMediaItems = [];
+let renderedMediaList = null;
+let renderedActiveIndex = -1;
+const thumbnailItemByElement = new WeakMap();
+const thumbnailObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) {
+        continue;
+      }
+
+      const item = thumbnailItemByElement.get(entry.target);
+      if (item) {
+        loadMediaThumbnail(item);
+      }
+      thumbnailObserver.unobserve(entry.target);
+    }
+  }, {
+    root: mediaStrip,
+    rootMargin: "400px",
+  })
+  : null;
 
 export function applyFolderFilter(options = {}) {
   const previousItem = options.keepIndex ? state.images[state.activeIndex] : null;
@@ -235,7 +256,6 @@ export async function renderActiveImage() {
 
   renderMediaStrip();
 
-  renderFolderNav();
   placeholderImage.classList.toggle("is-hidden", hasImages);
   imageViewport.classList.toggle("is-hidden", !hasImages);
   imageViewport.classList.toggle("has-video", Boolean(isVideo));
@@ -314,39 +334,40 @@ export async function renderActiveImage() {
 function renderMediaStrip() {
   mediaStrip.classList.toggle("is-hidden", state.images.length === 0);
 
-  const mediaListChanged = renderedMediaItems.length !== state.images.length
-    || renderedMediaItems.some(({ media }, index) => media !== state.images[index]);
+  const mediaListChanged = renderedMediaList !== state.images;
+  const activeIndexChanged = mediaListChanged || renderedActiveIndex !== state.activeIndex;
 
   if (mediaListChanged) {
+    thumbnailObserver?.disconnect();
     clearMediaThumbnailObjectUrls();
     mediaStrip.replaceChildren();
+    renderedMediaList = state.images;
+    const fragment = document.createDocumentFragment();
     renderedMediaItems = state.images.map((media, index) => {
       const button = document.createElement("button");
       const preview = document.createElement(media.type === "video" ? "video" : "img");
       const selector = document.createElement("input");
-      const url = media.url || URL.createObjectURL(media.file);
-
-      if (!media.url) {
-        state.mediaThumbnailObjectUrls.push(url);
-      }
 
       button.className = "media-strip-item";
       button.type = "button";
       button.title = media.name;
       button.setAttribute("aria-label", `Abrir ${media.name}`);
-      preview.src = url;
+      button.setAttribute("aria-pressed", String(index === state.activeIndex));
+      button.classList.toggle("is-active", index === state.activeIndex);
+      button.classList.toggle("is-selected-for-delete", state.gallerySelectedMedia.has(media));
       preview.alt = "";
-      preview.muted = true;
-      preview.playsInline = true;
       if (media.type === "video") {
+        preview.muted = true;
+        preview.playsInline = true;
         preview.preload = "metadata";
       } else {
-        preview.loading = "eager";
-        preview.decoding = "sync";
+        preview.loading = "lazy";
+        preview.decoding = "async";
       }
       selector.className = "media-strip-select";
       selector.type = "checkbox";
       selector.tabIndex = -1;
+      selector.checked = state.gallerySelectedMedia.has(media);
       selector.setAttribute("aria-label", `Seleccionar ${media.name} para eliminar`);
       selector.addEventListener("click", (event) => event.stopPropagation());
       selector.addEventListener("change", (event) => {
@@ -375,22 +396,55 @@ function renderMediaStrip() {
         if (state.gallerySelectedMedia.size > 0) return;
         selectImage(index);
       });
-      mediaStrip.append(button);
-      return { media, button };
+      fragment.append(button);
+      const renderedItem = { media, button, preview, url: "" };
+      thumbnailItemByElement.set(button, renderedItem);
+      if (thumbnailObserver) {
+        thumbnailObserver.observe(button);
+      } else {
+        loadMediaThumbnail(renderedItem);
+      }
+      return renderedItem;
     });
+    mediaStrip.append(fragment);
+    renderedActiveIndex = state.activeIndex;
+  } else if (renderedActiveIndex !== state.activeIndex) {
+    updateRenderedMediaItem(renderedActiveIndex, false);
+    updateRenderedMediaItem(state.activeIndex, true);
+    renderedActiveIndex = state.activeIndex;
   }
 
-  renderedMediaItems.forEach(({ button }, index) => {
-    const isActive = index === state.activeIndex;
-    button.setAttribute("aria-pressed", String(isActive));
-    button.classList.toggle("is-active", isActive);
-    button.classList.toggle("is-selected-for-delete", state.gallerySelectedMedia.has(state.images[index]));
-    const selector = button.querySelector(".media-strip-select");
-    if (selector) selector.checked = state.gallerySelectedMedia.has(state.images[index]);
-  });
+  const activeItem = renderedMediaItems[state.activeIndex];
+  if (activeItem) {
+    loadMediaThumbnail(activeItem);
+  }
 
-  const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-  renderedMediaItems[state.activeIndex]?.button.scrollIntoView({ block: "nearest", inline: "center", behavior: scrollBehavior });
+  if (activeIndexChanged) {
+    const scrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    activeItem?.button.scrollIntoView({ block: "nearest", inline: "center", behavior: scrollBehavior });
+  }
+}
+
+function loadMediaThumbnail(item) {
+  if (item.url) {
+    return;
+  }
+
+  item.url = item.media.url || URL.createObjectURL(item.media.file);
+  if (!item.media.url) {
+    state.mediaThumbnailObjectUrls.push(item.url);
+  }
+  item.preview.src = item.url;
+}
+
+function updateRenderedMediaItem(index, isActive) {
+  const item = renderedMediaItems[index];
+  if (!item) {
+    return;
+  }
+
+  item.button.setAttribute("aria-pressed", String(isActive));
+  item.button.classList.toggle("is-active", isActive);
 }
 
 export function updateFavoriteButton(media = state.images[state.activeIndex]) {
@@ -520,6 +574,10 @@ async function playNextSlide() {
   if (!state.images.length) {
     stopSlideshow();
     await renderActiveImage();
+    return;
+  }
+
+  if (isActiveVideo() && !activeVideo.ended) {
     return;
   }
 

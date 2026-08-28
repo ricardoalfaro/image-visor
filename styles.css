@@ -1732,6 +1732,9 @@ input[type="file"] {
 
 .media-strip-item {
   position: relative;
+  contain: layout paint style;
+  content-visibility: auto;
+  contain-intrinsic-size: var(--media-thumbnail-width) var(--media-thumbnail-height);
   width: var(--media-thumbnail-width);
   height: var(--media-thumbnail-height);
   flex: 0 0 auto;
