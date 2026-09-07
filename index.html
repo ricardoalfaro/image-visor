@@ -20,7 +20,7 @@
       <header class="app-header">
         <div class="app-brand">Image Viewer Pro</div>
         <div class="app-header-actions">
-          <button id="sidebarImportButton" class="header-import-button" type="button" aria-label="Importar una carpeta" title="Importar una carpeta"><i class="iconoir-media-image" aria-hidden="true"></i><span>Importar</span></button>
+          <button id="sidebarImportButton" class="header-import-button" type="button" aria-label="Importar una carpeta" title="Importar una carpeta (⌘I)"><i class="iconoir-media-image" aria-hidden="true"></i><span>Importar</span></button>
         </div>
       </header>
       <nav class="app-rail" aria-label="Panel principal">
@@ -165,6 +165,40 @@
         <div id="adjustmentsPanel" class="sidebar-panel is-hidden" data-sidebar-panel="adjustments">
           <section class="adjustments-section" aria-label="Ajustes temporales de imagen">
             <p id="adjustmentsEmptyState" class="adjustments-empty">Selecciona una imagen para ajustar su vista.</p>
+            <section class="tone-curve-control" aria-labelledby="toneCurveTitle">
+              <div class="tone-curve-header">
+                <div>
+                  <span class="tone-curve-kicker">Luz</span>
+                  <h3 id="toneCurveTitle">Curva de tonos</h3>
+                </div>
+                <button id="resetToneCurveButton" class="tone-curve-reset" type="button" aria-label="Restablecer curva de tonos" title="Restablecer curva"><i class="iconoir-undo" aria-hidden="true"></i></button>
+              </div>
+              <div class="tone-curve-graph">
+                <canvas id="toneCurveCanvas" width="520" height="360" role="img" aria-label="Curva de tonos ajustable"></canvas>
+              </div>
+              <div class="tone-region-list" aria-label="Ajustes de región tonal">
+                <label class="tone-region-control">
+                  <span>Altas luces</span>
+                  <input type="range" min="-100" max="100" value="0" step="1" data-image-adjustment="highlights">
+                  <output data-adjustment-output="highlights">0</output>
+                </label>
+                <label class="tone-region-control">
+                  <span>Claros</span>
+                  <input type="range" min="-100" max="100" value="0" step="1" data-image-adjustment="lights">
+                  <output data-adjustment-output="lights">0</output>
+                </label>
+                <label class="tone-region-control">
+                  <span>Oscuros</span>
+                  <input type="range" min="-100" max="100" value="0" step="1" data-image-adjustment="darks">
+                  <output data-adjustment-output="darks">0</output>
+                </label>
+                <label class="tone-region-control">
+                  <span>Sombras</span>
+                  <input type="range" min="-100" max="100" value="0" step="1" data-image-adjustment="shadows">
+                  <output data-adjustment-output="shadows">0</output>
+                </label>
+              </div>
+            </section>
             <div class="adjustment-list">
               <label class="adjustment-control">
                 <span>Brillo</span>
@@ -252,6 +286,13 @@
     </main>
 
     <svg width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="toneCurveFilter" color-interpolation-filters="sRGB">
+        <feComponentTransfer>
+          <feFuncR id="toneCurveRed" type="table" tableValues="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1"></feFuncR>
+          <feFuncG id="toneCurveGreen" type="table" tableValues="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1"></feFuncG>
+          <feFuncB id="toneCurveBlue" type="table" tableValues="0 0.125 0.25 0.375 0.5 0.625 0.75 0.875 1"></feFuncB>
+        </feComponentTransfer>
+      </filter>
       <filter id="sharpenFilter" color-interpolation-filters="sRGB">
         <feConvolveMatrix id="sharpenKernel" order="3" preserveAlpha="true" edgeMode="duplicate" kernelMatrix="0 0 0 0 1 0 0 0 0"></feConvolveMatrix>
       </filter>

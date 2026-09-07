@@ -80,6 +80,7 @@ Una de las funcionalidades avanzadas es la persistencia de favoritos:
 
 | Tecla | Acción |
 | :--- | :--- |
+| `⌘I` | Importar una carpeta |
 | `ArrowRight` / `ArrowLeft` | Imagen/Video siguiente / anterior |
 | `Space` | Reproducir / Pausar la presentación |
 | `R` / `r` | Activar / Desactivar modo aleatorio (Shuffle) |

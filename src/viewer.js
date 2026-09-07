@@ -23,13 +23,16 @@ import {
 } from "./dom.js";
 import { setZoom, resetFullscreenZoom, clearFullscreenSelection } from "./zoom-pan.js";
 import { getFavoriteKey, isFavorite } from "./favorites.js";
-import { applyImageAdjustments, renderImageAdjustmentControls, resetImageAdjustments } from "./image-adjustments.js";
+import { applyImageAdjustments, renderImageAdjustmentControls } from "./image-adjustments.js";
 import { canDeleteMedia } from "./delete.js";
 import { getCollectionMedia } from "./collections.js";
 
 let renderedMediaItems = [];
 let renderedMediaList = null;
 let renderedActiveIndex = -1;
+let wheelDistance = 0;
+let wheelResetTimer = 0;
+const WHEEL_NAVIGATION_THRESHOLD = 80;
 const thumbnailItemByElement = new WeakMap();
 const thumbnailObserver = "IntersectionObserver" in window
   ? new IntersectionObserver((entries) => {
@@ -291,7 +294,7 @@ export async function renderActiveImage() {
     activeVideo.removeAttribute("src");
     activeVideo.load();
     activePosition.textContent = "";
-    resetImageAdjustments();
+    renderImageAdjustmentControls();
     return;
   }
 
@@ -304,7 +307,6 @@ export async function renderActiveImage() {
     activeImage.removeAttribute("src");
     activeImage.alt = "";
     activeImage.style.filter = "";
-    resetImageAdjustments();
     activeVideo.autoplay = true;
     activeVideo.loop = false;
     activeVideo.controls = true;
@@ -314,7 +316,6 @@ export async function renderActiveImage() {
     activeVideo.load();
     playActiveVideo();
   } else {
-    resetImageAdjustments();
     activeVideo.pause();
     activeVideo.removeAttribute("src");
     activeVideo.load();
@@ -481,6 +482,53 @@ export async function selectImage(index) {
   setZoom(100);
   await renderActiveImage();
 }
+
+function getNextPhotoIndex(startIndex, direction) {
+  if (!state.images.length) {
+    return -1;
+  }
+
+  let index = startIndex;
+  for (let steps = 0; steps < state.images.length; steps += 1) {
+    index = (index + direction + state.images.length) % state.images.length;
+    if (state.images[index]?.type === "image") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function handlePhotoStackWheel(event) {
+  const activeMedia = state.images[state.activeIndex];
+  if (!activeMedia || activeMedia.type !== "image" || state.images.length < 2 || event.ctrlKey) {
+    return;
+  }
+
+  const direction = Math.sign(event.deltaY);
+  if (!direction) {
+    return;
+  }
+
+  event.preventDefault();
+  wheelDistance += event.deltaY;
+  window.clearTimeout(wheelResetTimer);
+  wheelResetTimer = window.setTimeout(() => {
+    wheelDistance = 0;
+  }, 140);
+
+  if (Math.abs(wheelDistance) < WHEEL_NAVIGATION_THRESHOLD) {
+    return;
+  }
+
+  wheelDistance = 0;
+  const nextIndex = getNextPhotoIndex(state.activeIndex, direction);
+  if (nextIndex >= 0 && nextIndex !== state.activeIndex) {
+    selectImage(nextIndex);
+  }
+}
+
+imageViewport.addEventListener("wheel", handlePhotoStackWheel, { passive: false });
 
 export function showPrevious() {
   selectImage(state.activeIndex - 1);

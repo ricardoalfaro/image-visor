@@ -66,3 +66,98 @@ The reference and implementation were reviewed together in the same conversation
 - Consider a real local search feature before adding a search field.
 
 final result: passed
+
+---
+
+## Navegación circular por scroll — 2026-09-07
+
+**Findings**
+
+- [P1] Falta una captura del visor con una colección local activa.
+  Location: marco central.
+  Evidence: la referencia capturada en `/tmp/image-visor-infinite-scroll-qa/source-reference-desktop.png` y `/tmp/image-visor-infinite-scroll-qa/source-reference-mobile.png` muestra navegación por una colección de fotos. La única captura de la implementación disponible, `/tmp/image-visor-infinite-scroll-qa/implementation-empty-desktop.png`, muestra el estado vacío: las carpetas recientes persistidas no conservan archivos accesibles entre sesiones y el selector de carpeta nativo no puede automatizarse desde este navegador.
+  Impact: no es posible comparar visualmente el ciclo en una colección real.
+  Fix: cargar una carpeta local con tres o más fotos y repetir la captura en escritorio y móvil; comprobar también rueda/trackpad hacia ambos sentidos, el salto de la última a la primera foto y la vista de vídeo.
+
+**Open Questions**
+
+- El patrón se implementó solo para fotos. Los vídeos conservan el visor previo y no participan en el ciclo, para no modificar sus controles ni reproducción.
+
+**Implementation Checklist**
+
+1. La foto activa conserva el tamaño completo del marco, sin márgenes añadidos.
+2. La rueda o trackpad navega hacia delante y atrás en ciclo, omitiendo vídeos.
+3. Zoom y pantalla completa conservan sus interacciones existentes.
+4. `node --check src/viewer.js`, `node --check app.js` y `git diff --check` pasaron; la consola del estado vacío no registra errores.
+
+**Follow-up Polish**
+
+- Evaluar con fotos horizontales, verticales y panorámicas reales para comprobar el ciclo continuo.
+
+Source visual truth: `/tmp/image-visor-infinite-scroll-qa/source-reference-desktop.png` and `/tmp/image-visor-infinite-scroll-qa/source-reference-mobile.png`.
+
+Implementation screenshot: `/tmp/image-visor-infinite-scroll-qa/implementation-empty-desktop.png`.
+
+Viewport: reference desktop 1280 × 720 CSS px, reference mobile 390 × 844 CSS px; implementation initial desktop 1280 × 720 CSS px, device scale factor 1.
+
+State: reference gallery visible; implementation empty due unavailable local files.
+
+Full-view comparison evidence: blocked because the implementation capture does not contain an active multi-photo collection.
+
+Focused region comparison evidence: not applicable until the central image is rendered with local media.
+
+Comparison history: initial code review and empty-state browser check completed; no visual iteration can begin until media is loaded.
+
+Primary interactions tested: static syntax checks, empty state, and console error check. The file-import interaction requires a native folder choice and was not automated.
+
+final result: blocked
+
+---
+
+## Curva de tonos — 2026-08-30
+
+### Comparison target
+
+- Source visual truth: `/var/folders/7q/h1hcpn9s3710gwq4zd3y0jwm0000gn/T/codex-clipboard-3492a8c9-f75f-45ed-a330-7645bb368af9.png`
+- Source dimensions: 333 × 358 px.
+- Implementation screenshot: `/tmp/image-visor-tone-curve.png`
+- Comparison image: `/tmp/image-visor-tone-curve-comparison.png`
+- Implementation viewport: 1280 × 720 CSS px, device scale factor 1.
+- Comparison normalization: source and the extracted left controls panel were scaled into 320 × 344 px regions for side-by-side review.
+- State: dark theme, a local image selected, image-adjustments panel open, curve reset to its diagonal default.
+
+### Full-view comparison evidence
+
+The implementation preserves the reference control’s compact dark module: a tonal title, histogram-backed grid, neutral diagonal, four visible draggable points, and four region sliders in the matching high-to-low luminance order. It uses the product’s existing typography, spacing and dark panel tokens so it belongs with the existing viewer rather than reproducing legacy editor chrome literally.
+
+### Focused region comparison evidence
+
+The graph and region controls were compared from `/tmp/image-visor-tone-curve-comparison.png`. The plotted histogram, four-by-four grid, linear curve and regional slider density all remain legible at the compact panel size. Direct dragging of the shadow point changed the control value to `+49` and updated the active image filter; the reset action restored all tonal values to `0` and the neutral curve table.
+
+### Fidelity surfaces
+
+- Fonts and typography: uses the application’s Google Sans hierarchy; the small uppercase “Luz” kicker and 14 px title preserve the compact inspector rhythm of the reference.
+- Spacing and layout rhythm: the graph, 12 px internal intervals and four compact sliders fit above the existing adjustment controls without altering the viewer canvas.
+- Colors and visual tokens: graphite panel, subdued grid, low-opacity histogram, white curve and muted labels follow both the dark reference and the app’s current tokens.
+- Image quality and asset fidelity: the histogram and curve are rendered by the interactive canvas control, not substituted product imagery; the selected photograph remains the original local media.
+- Copy and content: Spanish labels mirror the intended tonal regions: Altas luces, Claros, Oscuros and Sombras.
+
+### Findings
+
+No actionable P0, P1 or P2 differences. The reference’s legacy panel chevrons and corner affordances were intentionally omitted because the app already has a modern sidebar and reset pattern.
+
+### Primary interactions tested
+
+1. Opened the persisted `Own` gallery and selected the image adjustment panel.
+2. Changed Altas luces to `+20`; the curve table and `url(#toneCurveFilter)` on the active image updated.
+3. Dragged the shadow point directly in the graph; Sombras changed to `+49`.
+4. Restored the curve; all tone adjustments returned to neutral.
+5. Checked browser console errors and warnings: none.
+
+### Implementation checklist
+
+1. Added a compact interactive tonal curve with histogram, grid and draggable points.
+2. Added four synchronized regional tone sliders and a curve reset action.
+3. Applied the generated tone curve through an SVG component-transfer filter on the active image.
+
+final result: passed

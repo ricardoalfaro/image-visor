@@ -34,3 +34,4 @@ export const RECENT_DB_NAME = "imageVisorFolderHandles";
 export const RECENT_DB_STORE = "handles";
 export const RECENT_BROWSER_FILES_STORE = "browserFolders";
 export const NOTICE_AUTO_HIDE_MS = 10000;
+export const IMAGE_ADJUSTMENTS_KEY = "imageVisorImageAdjustments";

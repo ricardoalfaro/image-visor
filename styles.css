@@ -574,7 +574,7 @@ button {
   position: absolute;
   top: 14px;
   right: 14px;
-  z-index: 4;
+  z-index: 30;
   width: 36px;
   height: 36px;
   display: grid;
@@ -1489,6 +1489,110 @@ button {
 .adjustment-list {
   display: grid;
   gap: 22px;
+  margin-top: 22px;
+}
+
+.tone-curve-control {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--workspace-control, #242424) 72%, transparent);
+}
+
+.tone-curve-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tone-curve-kicker {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tone-curve-header h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tone-curve-reset {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tone-curve-reset:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--control-hover);
+}
+
+.tone-curve-reset:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.tone-curve-graph {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: #1d1d1d;
+}
+
+.tone-curve-graph canvas {
+  display: block;
+  width: 100%;
+  height: 176px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.tone-curve-graph canvas.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.tone-region-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tone-region-control {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 28px;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tone-region-control input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--active);
+}
+
+.tone-region-control output {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .adjustment-control {
@@ -1832,12 +1936,12 @@ body.media-strip-expanded .media-strip-item.is-active,
 body.media-strip-expanded .media-strip-item.is-selected-for-delete,
 :fullscreen body.media-strip-expanded .media-strip-item.is-active,
 :fullscreen body.media-strip-expanded .media-strip-item.is-selected-for-delete {
-  border-color: var(--workspace-text, #eeeeee);
+  border-color: transparent;
   opacity: 1;
 }
 
 .media-strip-item.is-active {
-  border-color: var(--workspace-text, #eeeeee);
+  border-color: transparent;
   opacity: 1;
 }
 
