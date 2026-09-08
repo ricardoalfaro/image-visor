@@ -127,7 +127,7 @@ sortOptionButtons.forEach((button) => {
 });
 
 export function setThemePreference(theme, options = {}) {
-  const nextTheme = ["light", "dark", "auto"].includes(theme) ? theme : "auto";
+  const nextTheme = ["light", "dark", "auto"].includes(theme) ? theme : "dark";
   document.documentElement.dataset.theme = nextTheme;
   themeToggleButton.setAttribute("aria-label", getThemeLabel(nextTheme));
 

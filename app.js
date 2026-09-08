@@ -42,6 +42,10 @@ import {
 let favoriteControlTimer = 0;
 let viewerControlsTimer = 0;
 let pendingCollectionMedia = null;
+const focusModeQuery = window.matchMedia("(min-width: 761px)");
+const FOCUS_REVEAL_EDGE_PX = 24;
+const FOCUS_STRIP_REVEAL_EDGE_PX = 72;
+const FOCUS_WHEEL_THRESHOLD = 12;
 
 function setMediaStripExpanded(expanded) {
   if (expanded) {
@@ -185,6 +189,7 @@ function revealViewerControls() {
 
 function handleFullscreenChange() {
   updateFullscreenButton();
+  document.body.classList.remove("is-focus-mode", "is-focus-chrome-revealed", "is-focus-strip-revealed");
   imageViewport.classList.remove("show-favorite-control");
   imageViewport.classList.remove("show-overlay-controls");
   window.clearTimeout(favoriteControlTimer);
@@ -208,6 +213,56 @@ function handleFullscreenMediaStrip(event) {
   const isInsideStrip = mediaStrip.contains(event.target);
   const isNearBottom = event.clientY >= window.innerHeight - 72;
   document.body.classList.toggle("show-fullscreen-media-strip", isInsideStrip || isNearBottom);
+}
+
+function isFocusModeGestureTarget(target) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return !(
+    imageViewport.contains(target)
+    || mediaStrip.contains(target)
+    || target.closest(".app-header, .app-rail, .app-sidebar, .sidebar-scrim, .gallery-selection-bar, dialog")
+  );
+}
+
+function setFocusMode(enabled) {
+  if (!focusModeQuery.matches || document.fullscreenElement || document.body.classList.contains("has-open-dialog")) {
+    return;
+  }
+
+  document.body.classList.toggle("is-focus-mode", enabled);
+  document.body.classList.remove("is-focus-chrome-revealed", "is-focus-strip-revealed");
+}
+
+function handleFocusModeWheel(event) {
+  if (!focusModeQuery.matches || !state.images.length || !isFocusModeGestureTarget(event.target)) {
+    return;
+  }
+
+  if (event.deltaY <= -FOCUS_WHEEL_THRESHOLD) {
+    setFocusMode(true);
+  } else if (event.deltaY >= FOCUS_WHEEL_THRESHOLD) {
+    setFocusMode(false);
+  }
+}
+
+function handleFocusModeReveal(event) {
+  if (!document.body.classList.contains("is-focus-mode")) {
+    return;
+  }
+
+  const showChrome = event.clientY <= FOCUS_REVEAL_EDGE_PX || event.clientX <= FOCUS_REVEAL_EDGE_PX;
+  const showStrip = event.clientY >= window.innerHeight - FOCUS_STRIP_REVEAL_EDGE_PX;
+  document.body.classList.toggle("is-focus-chrome-revealed", showChrome);
+  document.body.classList.toggle("is-focus-strip-revealed", showStrip);
+}
+
+function handleFocusModeBreakpointChange() {
+  if (!focusModeQuery.matches) {
+    document.body.classList.remove("is-focus-mode", "is-focus-chrome-revealed", "is-focus-strip-revealed");
+  }
 }
 
 function initializeOnboarding() {
@@ -526,6 +581,9 @@ activeVideo.addEventListener("ended", handleVideoEnded);
 
 document.addEventListener("fullscreenchange", handleFullscreenChange);
 document.addEventListener("pointermove", handleFullscreenMediaStrip);
+document.addEventListener("pointermove", handleFocusModeReveal);
+window.addEventListener("wheel", handleFocusModeWheel, { passive: true });
+focusModeQuery.addEventListener("change", handleFocusModeBreakpointChange);
 mediaStrip.addEventListener("pointerleave", () => {
   if (document.fullscreenElement) {
     document.body.classList.remove("show-fullscreen-media-strip");
@@ -553,10 +611,10 @@ gallerySelectionDelete.addEventListener("click", async () => {
 document.addEventListener("click", handleViewerOutsideClick);
 document.addEventListener("keydown", handleKeyboard);
 
-let initialTheme = "auto";
+let initialTheme = "dark";
 
 try {
-  initialTheme = localStorage.getItem("imageVisorTheme") || "auto";
+  initialTheme = localStorage.getItem("imageVisorTheme") || "dark";
 } catch (error) {}
 
 setThemePreference(initialTheme, { persist: false });
