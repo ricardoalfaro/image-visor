@@ -31,8 +31,11 @@ import { openDeleteConfirm, openDeleteBatchConfirm, closeDeleteConfirm, confirmD
 import { createCollection, isMediaInCollection, loadCollections, toggleMediaInCollection } from "./src/collections.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
 import {
+  initializeToneCurveControl,
+  loadPersistedImageAdjustments,
   renderImageAdjustmentControls,
   resetImageAdjustments,
+  resetToneCurve,
   updateImageAdjustment
 } from "./src/image-adjustments.js";
 
@@ -260,6 +263,19 @@ function handleKeyboard(event) {
     return;
   }
 
+  if (
+    event.metaKey
+    && !event.ctrlKey
+    && !event.altKey
+    && !event.shiftKey
+    && !event.repeat
+    && event.key.toLowerCase() === "i"
+  ) {
+    event.preventDefault();
+    sidebarImportButton.click();
+    return;
+  }
+
   if (event.key === "Escape" && document.body.classList.contains("has-open-sidebar")) {
     event.preventDefault();
     closeSidebar();
@@ -474,6 +490,7 @@ adjustmentsButton.addEventListener("click", () => {
 });
 sortButton.addEventListener("click", () => toggleSidebar("sort"));
 resetAdjustmentsButton.addEventListener("click", resetImageAdjustments);
+document.querySelector("#resetToneCurveButton")?.addEventListener("click", resetToneCurve);
 adjustmentInputs.forEach((input) => {
   input.addEventListener("input", () => {
     updateImageAdjustment(input.dataset.imageAdjustment, input.value);
@@ -543,12 +560,14 @@ try {
 } catch (error) {}
 
 setThemePreference(initialTheme, { persist: false });
+loadPersistedImageAdjustments();
 await loadRecentFolders();
 await loadFavorites();
 await loadCollections();
 renderRecentFolders();
 renderCollections();
 renderFavorites();
+initializeToneCurveControl();
 renderImageAdjustmentControls();
 renderSortOptions();
 initializeOnboarding();

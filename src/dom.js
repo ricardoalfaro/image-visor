@@ -62,3 +62,6 @@ export const sharpenKernel = document.querySelector("#sharpenKernel");
 export const adjustmentOutputs = Array.from(document.querySelectorAll("[data-adjustment-output]"));
 export const resetAdjustmentsButton = document.querySelector("#resetAdjustmentsButton");
 export const adjustmentsEmptyState = document.querySelector("#adjustmentsEmptyState");
+export const toneCurveCanvas = document.querySelector("#toneCurveCanvas");
+export const resetToneCurveButton = document.querySelector("#resetToneCurveButton");
+export const toneCurveFunctions = Array.from(document.querySelectorAll("#toneCurveRed, #toneCurveGreen, #toneCurveBlue"));
