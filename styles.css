@@ -2093,15 +2093,6 @@ body.media-strip-expanded .media-strip-item.is-selected-for-delete,
     padding-left: calc(var(--workspace-rail-width) + var(--library-sidebar-width) + var(--shell-padding-x));
   }
 
-  body.is-focus-mode.is-focus-strip-revealed .viewer-layout {
-    --frame-available-height: calc(100dvh - var(--library-filmstrip-height) - (var(--viewer-vertical-padding) * 2));
-    padding-bottom: calc(var(--library-filmstrip-height) + var(--viewer-vertical-padding));
-  }
-
-  body.is-focus-mode.is-focus-chrome-revealed.is-focus-strip-revealed .viewer-layout {
-    --frame-available-height: calc(100dvh - var(--workspace-header-height) - var(--library-filmstrip-height) - (var(--viewer-vertical-padding) * 2));
-  }
-
   .stage {
     padding: 0 var(--stage-side-padding);
   }
@@ -2182,7 +2173,7 @@ body.media-strip-expanded .media-strip-item.is-selected-for-delete,
     height: var(--library-filmstrip-height);
     padding: 10px 18px;
     background: rgba(12, 12, 12, 0.38);
-    transition: left 220ms ease, right 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+    transition: left 220ms ease, right 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, box-shadow 220ms ease;
   }
 
   body.has-open-sidebar .media-strip {
@@ -2200,6 +2191,7 @@ body.media-strip-expanded .media-strip-item.is-selected-for-delete,
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0);
+    box-shadow: 0 -18px 38px rgba(0, 0, 0, 0.38), 0 10px 24px rgba(0, 0, 0, 0.3);
   }
 
   .folder-nav {
