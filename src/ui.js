@@ -242,6 +242,7 @@ function getFolderPhotoCountLabel(folder) {
 }
 
 export function renderFavorites() {
+  window.dispatchEvent(new Event("image-visor:collections-updated"));
   const favorites = getAvailableFavorites();
   const favoritePhotosCount = collectionsList.querySelector("#favoritePhotosCount");
   if (!favoritePhotosCount) return;
@@ -250,6 +251,7 @@ export function renderFavorites() {
 }
 
 export function renderCollections() {
+  window.dispatchEvent(new Event("image-visor:collections-updated"));
   for (const objectUrl of state.collectionCoverObjectUrls.values()) URL.revokeObjectURL(objectUrl);
   state.collectionCoverObjectUrls.clear();
   collectionsList.innerHTML = "";

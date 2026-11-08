@@ -4,6 +4,11 @@ import {
   tvLinkRevokeButton, tvLinkCloseButton, tvLinkNewCodeButton,
 } from "./dom.js";
 import { showNotice } from "./ui.js";
+import { getFavoriteKey } from "./favorites.js";
+
+const COLLECTIONS_SYNCED_KEY = "imageVisorTvCollectionsSynced";
+let collectionsSyncing = false;
+let collectionsDirty = false;
 
 const CODE_LIFETIME_MS = 5 * 60 * 1000;
 let countdownTimer = 0;
@@ -50,7 +55,88 @@ export async function syncTvGalleries() {
 
 function scheduleSync() {
   window.clearTimeout(syncTimer);
-  syncTimer = window.setTimeout(syncTvGalleries, 800);
+  syncTimer = window.setTimeout(() => {
+    syncTvGalleries();
+    syncTvCollections();
+  }, 800);
+}
+
+/** Collections and Favoritos only exist in this browser, so their photos are copied to the TV service. */
+function getCollectionGroups() {
+  const groups = state.collections.map((collection) => ({ id: collection.id, name: collection.name, media: collection.media }));
+
+  if (state.favoriteMedia.length) {
+    groups.unshift({ id: "favorites", name: "Favoritos", media: state.favoriteMedia });
+  }
+
+  return groups;
+}
+
+function getItemKey(media) {
+  return media.collectionKey || getFavoriteKey(media);
+}
+
+export async function syncTvCollections() {
+  if (!isLocalServerHost()) {
+    return;
+  }
+
+  // One sync at a time; changes made meanwhile trigger one more pass.
+  if (collectionsSyncing) {
+    collectionsDirty = true;
+    return;
+  }
+
+  collectionsSyncing = true;
+
+  try {
+    do {
+      collectionsDirty = false;
+      const groups = getCollectionGroups();
+      let hadSynced = false;
+
+      try {
+        hadSynced = localStorage.getItem(COLLECTIONS_SYNCED_KEY) === "true";
+      } catch (error) {}
+
+      // Never wipe the TV's collections because this browser profile has none yet.
+      if (!groups.length && !hadSynced) {
+        continue;
+      }
+
+      const blobsByFile = new Map();
+      const collections = groups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        items: group.media
+          .filter((media) => media.type !== "video" && media.file instanceof Blob)
+          .map((media) => {
+            const key = getItemKey(media);
+            blobsByFile.set(`${group.id}\u0000${key}`, media.file);
+            return { key, name: media.name, size: media.file.size, type: media.file.type };
+          }),
+      }));
+      const result = await tvApi("collections", { collections });
+
+      if (!result.ok) {
+        return;
+      }
+
+      try {
+        localStorage.setItem(COLLECTIONS_SYNCED_KEY, "true");
+      } catch (error) {}
+
+      for (const { collection, file, key } of result.missing || []) {
+        const blob = blobsByFile.get(`${collection}\u0000${key}`);
+
+        if (blob) {
+          await fetch(`/api/tv/collections/${collection}/${file}`, { method: "PUT", body: blob, headers: { "Content-Type": "application/octet-stream" } }).catch(() => {});
+        }
+      }
+    } while (collectionsDirty);
+  } finally {
+    collectionsSyncing = false;
+  }
 }
 
 function formatCode(code) {
@@ -194,5 +280,7 @@ export async function initializeTvLink() {
 
   // Keep the Apple TV's galleries equal to the folders added on the desktop.
   window.addEventListener("image-visor:recent-folders-updated", scheduleSync);
+  window.addEventListener("image-visor:collections-updated", scheduleSync);
   syncTvGalleries();
+  syncTvCollections();
 }

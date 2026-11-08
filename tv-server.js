@@ -41,8 +41,21 @@ function fileSessionStore(file) {
   };
 }
 
-async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 12 * 3600000, sessionStore, cacheDir }) {
+const COLLECTION_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const ITEM_FILE = /^[a-f0-9]{64}\.(jpg|png|heic)$/;
+const EXT_BY_MIME = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/heic': '.heic' };
+const sha = value => crypto.createHash('sha256').update(value).digest('hex');
+function itemFileName(item) {
+  const ext = path.extname(String(item.name || '')).toLowerCase();
+  const normalized = ext === '.jpeg' ? '.jpg' : ext;
+  const chosen = FORMATS[normalized] ? normalized : EXT_BY_MIME[item.type];
+  return chosen && typeof item.key === 'string' && item.key ? `${sha(item.key)}${chosen}` : null;
+}
+
+async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 12 * 3600000, sessionStore, cacheDir, collectionsDir }) {
   let roots = [];
+  let collectionRoots = [];
+  const allRoots = () => [...roots, ...collectionRoots];
   // Folders can be replaced at runtime (the desktop app syncs its list). Unreadable ones are skipped.
   async function setFolders(list) {
     const next = []; const skipped = [];
@@ -51,15 +64,77 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
       try {
         const root = await fsp.realpath(entry.path);
         if (!(await fsp.stat(root)).isDirectory()) throw Error('not a directory');
-        const id = crypto.createHash('sha256').update(root).digest('hex').slice(0, 32);
-        if (!next.some(r => r.id === id)) next.push({ id, name: (entry.name || '').trim() || path.basename(root), root });
+        const id = sha(root).slice(0, 32);
+        if (!next.some(r => r.id === id)) next.push({ id, name: (entry.name || '').trim() || path.basename(root), root, kind: 'folder' });
       } catch { skipped.push(entry.path); }
     }
-    const keep = new Set(next.map(r => r.root));
-    for (const [id, info] of files) if (!keep.has(info.root)) files.delete(id);
     for (const root of roots) if (!next.some(r => r.id === root.id)) scans.delete(root.id);
     roots = next;
+    pruneFiles();
     return { count: next.length, skipped };
+  }
+  function pruneFiles() {
+    const keep = new Set(allRoots().map(r => r.root));
+    for (const [id, info] of files) if (!keep.has(info.root)) files.delete(id);
+  }
+
+  // Collections and Favoritos live in the browser; the desktop app uploads copies of their photos.
+  async function readCollection(dir) {
+    try {
+      const real = await fsp.realpath(dir);
+      const data = JSON.parse(await fsp.readFile(path.join(real, 'collection.json'), 'utf8'));
+      const sourceId = path.basename(real);
+      if (!COLLECTION_ID.test(sourceId)) return null;
+      return { id: sha(`collection:${sourceId}`).slice(0, 32), sourceId, name: data.name || 'Colección', root: real, kind: 'collection', items: data.items || [] };
+    } catch { return null; }
+  }
+  async function loadCollections() {
+    const loaded = [];
+    for (const entry of await fsp.readdir(collectionsDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && COLLECTION_ID.test(entry.name)) { const c = await readCollection(path.join(collectionsDir, entry.name)); if (c) loaded.push(c); }
+    }
+    collectionRoots = loaded;
+  }
+  async function setCollections(list) {
+    const missing = []; const live = new Set();
+    for (const c of list) {
+      if (!c || !COLLECTION_ID.test(c.id || '') || !Array.isArray(c.items)) continue;
+      const dir = path.join(collectionsDir, c.id);
+      await fsp.mkdir(dir, { recursive: true, mode: 0o700 });
+      const real = await fsp.realpath(dir);
+      const items = [];
+      for (const item of c.items) {
+        const file = itemFileName(item);
+        if (!file || items.some(i => i.file === file)) continue;
+        items.push({ file, name: String(item.name || '').slice(0, 200) });
+        let present = false;
+        try { present = (await fsp.stat(path.join(real, file))).size === item.size; } catch {}
+        if (!present && Number.isFinite(item.size) && item.size <= MAX_IMAGE_BYTES) missing.push({ collection: c.id, file, key: item.key });
+      }
+      await fsp.writeFile(path.join(real, 'collection.json'), JSON.stringify({ name: String(c.name || '').slice(0, 120), items }), { mode: 0o600 });
+      const wanted = new Set(items.map(i => i.file));
+      for (const name of await fsp.readdir(real)) if (ITEM_FILE.test(name) && !wanted.has(name)) await fsp.rm(path.join(real, name), { force: true });
+      live.add(c.id);
+      scans.delete(sha(`collection:${c.id}`).slice(0, 32));
+    }
+    for (const entry of await fsp.readdir(collectionsDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && COLLECTION_ID.test(entry.name) && !live.has(entry.name)) await fsp.rm(path.join(collectionsDir, entry.name), { recursive: true, force: true });
+    }
+    await loadCollections();
+    pruneFiles();
+    return { count: collectionRoots.length, missing };
+  }
+  async function saveCollectionItem(collectionId, file, readable) {
+    const root = collectionRoots.find(r => r.sourceId === collectionId);
+    if (!root || !ITEM_FILE.test(file) || !root.items.some(i => i.file === file)) throw Object.assign(Error('Unknown item'), { status: 404 });
+    const tmp = path.join(root.root, `${file}.${crypto.randomBytes(4).toString('hex')}.tmp`);
+    let size = 0;
+    const limit = new (require('node:stream').Transform)({ transform(chunk, _enc, done) { size += chunk.length; done(size > MAX_IMAGE_BYTES ? Object.assign(Error('Too large'), { status: 413 }) : null, chunk); } });
+    try {
+      await require('node:stream/promises').pipeline(readable, limit, fs.createWriteStream(tmp, { mode: 0o600 }));
+      await fsp.rename(tmp, path.join(root.root, file));
+    } finally { await fsp.rm(tmp, { force: true }); }
+    scans.delete(root.id);
   }
   cacheDir ||= await fsp.mkdtemp(path.join(os.tmpdir(), 'ivp-cache-'));
   await fsp.mkdir(cacheDir, { recursive: true, mode: 0o700 });
@@ -72,7 +147,10 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
   const newCode = () => { pairing = { code: String(crypto.randomInt(10000000, 100000000)), expires: now() + 300000, attempts: 0 }; return pairing.code; };
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(body)); };
 
+  collectionsDir ||= await fsp.mkdtemp(path.join(os.tmpdir(), 'ivp-collections-'));
+  await fsp.mkdir(collectionsDir, { recursive: true, mode: 0o700 });
   await setFolders(folders);
+  await loadCollections();
 
   async function scan(root, dir = root.root, result = []) {
     for (const entry of await fsp.readdir(dir, { withFileTypes: true })) {
@@ -97,6 +175,18 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
   async function listImages(root) {
     const cached = scans.get(root.id);
     if (cached && cached.expires > now()) return cached.images;
+    if (root.kind === 'collection') {
+      const images = [];
+      for (const item of root.items) {
+        const file = path.join(root.root, item.file);
+        try { if (!(await fsp.stat(file)).isFile()) continue; } catch { continue; }
+        const id = sha(root.id + item.file);
+        files.set(id, { root: root.root, file });
+        images.push({ id, name: item.name || item.file, folder: '', mediaPath: `/v1/images/${id}`, displayPath: `/v1/display/${id}`, thumbPath: `/v1/thumbs/${id}` });
+      }
+      scans.set(root.id, { images, expires: now() + SCAN_TTL_MS });
+      return images;
+    }
     const images = await scan(root);
     images.sort((a, b) => `${a.folder}/${a.name}`.localeCompare(`${b.folder}/${b.name}`, 'en', { numeric: true }));
     scans.set(root.id, { images, expires: now() + SCAN_TTL_MS });
@@ -160,17 +250,17 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Read only' });
       if (url.pathname === '/v1/galleries') {
-        const galleries = await Promise.all(roots.map(async root => {
+        const galleries = await Promise.all(allRoots().map(async root => {
           try {
             const images = await listImages(root);
-            return { id: root.id, name: root.name, count: images.length, cover: images[0]?.thumbPath ?? null };
-          } catch { return { id: root.id, name: root.name, count: 0, cover: null }; }
+            return { id: root.id, name: root.name, kind: root.kind, count: images.length, cover: images[0]?.thumbPath ?? null };
+          } catch { return { id: root.id, name: root.name, kind: root.kind, count: 0, cover: null }; }
         }));
         return json(res, 200, { galleries });
       }
       const gallery = /^\/v1\/galleries\/([^/]+)$/.exec(url.pathname);
       if (gallery) {
-        const root = roots.find(r => r.id === gallery[1]);
+        const root = allRoots().find(r => r.id === gallery[1]);
         if (!root) return json(res, 404, { error: 'Gallery not found' });
         return json(res, 200, { images: await listImages(root) });
       }
@@ -210,7 +300,7 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
   server.headersTimeout = 10000;
   server.maxConnections = 32;
   return {
-    server, newCode, setFolders, roots: () => roots, pairingActive: () => Boolean(pairing && pairing.expires > now()),
+    server, newCode, setFolders, setCollections, saveCollectionItem, roots: () => roots, pairingActive: () => Boolean(pairing && pairing.expires > now()),
     hasSessions: () => [...sessions.values()].some(expiry => expiry > now()),
     revoke: () => { sessions.clear(); persist(); pairing = undefined; },
   };
@@ -245,7 +335,12 @@ function startControlServer(share, fingerprint) {
   const reply = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   const control = http.createServer(async (req, res) => {
     try {
-      let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 1e6) return reply(res, 413, {}); }
+      const upload = req.method === 'PUT' && /^\/collections\/([A-Za-z0-9_-]{1,64})\/([a-f0-9]{64}\.[a-z]+)$/.exec(req.url);
+      if (upload) {
+        try { await share.saveCollectionItem(upload[1], upload[2], req); return reply(res, 200, { saved: true }); }
+        catch (error) { return reply(res, error.status || 500, { error: error.message }); }
+      }
+      let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 1e7) return reply(res, 413, {}); }
       const body = raw ? JSON.parse(raw) : {};
       if (req.method === 'GET' && req.url === '/status') {
         return reply(res, 200, { running: true, paired: share.hasSessions(), galleries: share.roots().length, fingerprint });
@@ -255,6 +350,10 @@ function startControlServer(share, fingerprint) {
       }
       if (req.method === 'POST' && req.url === '/revoke') { share.revoke(); return reply(res, 200, { revoked: true }); }
       if (req.method === 'POST' && req.url === '/reload') { return reply(res, 200, await share.setFolders(readConfig())); }
+      if (req.method === 'POST' && req.url === '/collections') {
+        if (!Array.isArray(body.collections)) return reply(res, 400, { error: 'collections must be a list' });
+        return reply(res, 200, await share.setCollections(body.collections));
+      }
       if (req.method === 'POST' && req.url === '/galleries') {
         if (!Array.isArray(body.folders)) return reply(res, 400, { error: 'folders must be a list' });
         const folders = body.folders.filter(f => f && typeof f.path === 'string').map(f => ({ path: f.path, name: typeof f.name === 'string' ? f.name.slice(0, 120) : '' }));
@@ -343,6 +442,7 @@ async function main() {
   const share = await createShare({
     folders: readConfig(), key: fs.readFileSync(keyPath), cert, sessionTtlMs: 365 * 24 * 3600000,
     sessionStore: fileSessionStore(path.join(STATE_DIR, 'sessions.json')), cacheDir: path.join(STATE_DIR, 'cache'),
+    collectionsDir: path.join(STATE_DIR, 'collections'),
   });
   const port = Number(process.env.TV_PORT || 5443);
   await new Promise((resolve, reject) => { share.server.once('error', reject); share.server.listen(port, process.env.TV_HOST || '0.0.0.0', resolve); });
@@ -351,7 +451,7 @@ async function main() {
   console.log('Image Viewer Pro — TLS / read only');
   for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) if (a.family === 'IPv4' && !a.internal) console.log(`Apple TV address: https://${a.address}:${port}`);
   console.log(`Certificate SHA-256: ${fingerprint}`);
-  for (const root of share.roots()) console.log(`Sharing: ${root.root}`);
+  for (const root of share.roots().filter(r => r.kind === 'folder')) console.log(`Sharing: ${root.root}`);
   console.log(share.hasSessions() ? 'An Apple TV is already paired.' : 'Waiting for pairing: press “Vincular TV” in the desktop app.');
 
   // Bonjour: lets the Apple TV find this computer without typing an address.

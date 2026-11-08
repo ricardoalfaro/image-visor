@@ -2,7 +2,7 @@ import Foundation
 import CryptoKit
 import Security
 
-struct Gallery: Decodable, Identifiable { let id: String; let name: String; var count: Int? = nil; var cover: String? = nil }
+struct Gallery: Decodable, Identifiable { let id: String; let name: String; var kind: String? = nil; var count: Int? = nil; var cover: String? = nil }
 struct GalleryList: Decodable { let galleries: [Gallery] }
 struct Photo: Decodable, Identifiable {
     let id: String; let name: String; let folder: String; let mediaPath: String

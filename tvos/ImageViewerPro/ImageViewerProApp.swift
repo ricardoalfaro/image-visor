@@ -19,13 +19,13 @@ final class LibraryModel: ObservableObject {
     init() {
         if let saved = CredentialStore.load() { client = try? ShareClient(address: saved.address, fingerprint: saved.fingerprint, token: saved.token) }
     }
-    func refresh() async {
+    func refresh(silent: Bool = false) async {
         guard let client else { return }
         do { galleries = try await client.decode(GalleryList.self, path: "/v1/galleries").galleries }
         catch {
             if error is CancellationError { return }
             // A revoked or expired session sends the user straight back to pairing.
-            if error.localizedDescription.contains("vinculación caducó") { unlink() } else { self.error = error.localizedDescription }
+            if error.localizedDescription.contains("vinculación caducó") { unlink() } else if !silent { self.error = error.localizedDescription }
         }
         loaded = true
     }
@@ -257,28 +257,39 @@ struct HomeView: View {
     @AppStorage("shuffle") private var shuffle = false
     @State private var opened: Gallery?
     private let intervals = [5, 8, 15, 30]
+    private var folders: [Gallery] { model.galleries.filter { $0.kind != "collection" } }
+    // Favoritos and collections are copies kept by the desktop app; empty ones are hidden.
+    private var collections: [Gallery] { model.galleries.filter { $0.kind == "collection" && ($0.count ?? 0) > 0 } }
+
+    private func galleryGrid(_ items: [Gallery], client: ShareClient) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 440), spacing: 50)], spacing: 50) {
+            ForEach(items) { gallery in
+                Button { opened = gallery } label: {
+                    ZStack(alignment: .bottomLeading) {
+                        CoverImage(path: gallery.cover, client: client).frame(height: 280).clipped()
+                        LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(gallery.name).font(.title3).bold().lineLimit(1)
+                            if let count = gallery.count { Text("\(count) fotos").font(.caption).foregroundStyle(.secondary) }
+                        }.padding(20)
+                    }
+                }.buttonStyle(.card)
+            }
+        }
+    }
 
     var body: some View {
         if let client = model.client {
             ScrollView {
                 VStack(alignment: .leading, spacing: 40) {
                     Text("Galerías").font(.largeTitle).bold()
-                    if model.galleries.isEmpty && model.loaded {
+                    if folders.isEmpty && collections.isEmpty && model.loaded {
                         Text("No hay galerías disponibles. En el computador, abre carpetas en Image Viewer Pro y pulsa «Vincular TV».").foregroundStyle(.secondary)
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 440), spacing: 50)], spacing: 50) {
-                        ForEach(model.galleries) { gallery in
-                            Button { opened = gallery } label: {
-                                ZStack(alignment: .bottomLeading) {
-                                    CoverImage(path: gallery.cover, client: client).frame(height: 280).clipped()
-                                    LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(gallery.name).font(.title3).bold().lineLimit(1)
-                                        if let count = gallery.count { Text("\(count) fotos").font(.caption).foregroundStyle(.secondary) }
-                                    }.padding(20)
-                                }
-                            }.buttonStyle(.card)
-                        }
+                    galleryGrid(folders, client: client)
+                    if !collections.isEmpty {
+                        Text("Colecciones").font(.largeTitle).bold().padding(.top, 20)
+                        galleryGrid(collections, client: client)
                     }
                     HStack(spacing: 30) {
                         Button("Presentación: \(seconds) s") { seconds = intervals[((intervals.firstIndex(of: seconds) ?? -1) + 1) % intervals.count] }
@@ -290,6 +301,8 @@ struct HomeView: View {
                 }.padding(60)
             }
             .task { await model.refresh() }
+            // Keeps the list equal to the desktop app while this screen is open (folders added or removed there).
+            .task { while !Task.isCancelled { try? await Task.sleep(for: .seconds(8)); await model.refresh(silent: true) } }
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await model.refresh() } } }
             .fullScreenCover(item: $opened, onDismiss: { Task { await model.refresh() } }) { gallery in
                 ViewerScreen(gallery: gallery, client: client, seconds: seconds, shuffle: shuffle)

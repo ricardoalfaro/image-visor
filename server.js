@@ -118,8 +118,16 @@ async function handleTvApi(pathname, request, response) {
     "/api/tv/status": "GET",
     "/api/tv/pair": "POST",
     "/api/tv/galleries": "POST",
+    "/api/tv/collections": "POST",
     "/api/tv/revoke": "POST",
   };
+
+  // Photo upload for collections: streamed straight to the TV service.
+  const upload = /^\/api\/tv\/collections\/([A-Za-z0-9_-]{1,64})\/([a-f0-9]{64}\.[a-z]+)$/.exec(pathname);
+  if (upload && request.method === "PUT") {
+    await proxyTvUpload(request, response, `/collections/${upload[1]}/${upload[2]}`);
+    return;
+  }
 
   if (routes[pathname] !== request.method) {
     sendJson(response, 404, { error: "Not found" });
@@ -155,6 +163,33 @@ async function handleTvApi(pathname, request, response) {
   }
 
   sendJson(response, reply.status, reply.body);
+}
+
+function proxyTvUpload(request, response, route) {
+  return new Promise((resolve) => {
+    const headers = { "Content-Type": "application/octet-stream" };
+    if (request.headers["content-length"]) {
+      headers["Content-Length"] = request.headers["content-length"];
+    }
+
+    const req = http.request({ socketPath: TV_SOCKET, path: route, method: "PUT", headers }, (res) => {
+      let data = "";
+      res.on("data", (chunk) => { data += chunk; });
+      res.on("end", () => {
+        try {
+          sendJson(response, res.statusCode, JSON.parse(data));
+        } catch (error) {
+          sendJson(response, 502, { error: "Respuesta no válida del servicio" });
+        }
+        resolve();
+      });
+    });
+    req.on("error", () => {
+      sendJson(response, 503, { error: "El servicio de Apple TV no está activo." });
+      resolve();
+    });
+    request.pipe(req);
+  });
 }
 
 // The Apple TV service listens on a private Unix socket (0600), not on the network.
