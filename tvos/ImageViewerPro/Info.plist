@@ -9,6 +9,7 @@
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>NSLocalNetworkUsageDescription</key><string>Conectar al computador vinculado para mostrar tus galerías en Apple TV.</string>
+<key>NSBonjourServices</key><array><string>_ivp-tv._tcp</string></array>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 <key>UILaunchScreen</key><dict/>
 </dict></plist>

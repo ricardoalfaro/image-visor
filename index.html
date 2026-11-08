@@ -33,6 +33,9 @@
         <button id="adjustmentsButton" class="icon-button rail-button" type="button" aria-label="Controles de imagen" aria-controls="appSidebar" aria-expanded="false" aria-pressed="false" title="Controles">
           <i class="iconoir-settings" aria-hidden="true"></i>
         </button>
+        <button id="tvLinkButton" class="icon-button rail-button is-hidden" type="button" aria-label="Vincular TV" aria-haspopup="dialog" title="Vincular TV" hidden>
+          <i class="iconoir-tv" aria-hidden="true"></i>
+        </button>
         <span class="rail-divider" aria-hidden="true"></span>
         <button id="sidebarToggleButton" class="icon-button rail-button rail-toggle" type="button" aria-label="Desplegar panel" aria-expanded="false" title="Desplegar panel">
           <i class="iconoir-sidebar-collapse" aria-hidden="true"></i>
@@ -269,6 +272,20 @@
           <div class="confirm-dialog-actions">
             <button id="deleteConfirmCancelButton" class="button" type="button">Cancelar</button>
             <button id="deleteConfirmAcceptButton" class="button danger" type="button">Eliminar</button>
+          </div>
+        </div>
+      </div>
+      <div id="tvLinkDialog" class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="tvLinkTitle" aria-hidden="true">
+        <div class="confirm-dialog-panel tv-link-panel">
+          <h2 id="tvLinkTitle">Vincular Apple TV</h2>
+          <p id="tvLinkStatus">Comprobando el servicio…</p>
+          <div id="tvLinkCode" class="tv-link-code" aria-live="polite">— — — —  — — — —</div>
+          <p id="tvLinkHelp" class="tv-link-help">En el Apple TV abre la app, elige «Fotos locales» e introduce este código. Vale 5 minutos.</p>
+          <p class="tv-link-fingerprint">Huella del certificado<code id="tvLinkFingerprint">—</code></p>
+          <div class="confirm-dialog-actions">
+            <button id="tvLinkRevokeButton" class="button danger" type="button" hidden>Desvincular TVs</button>
+            <button id="tvLinkCloseButton" class="button" type="button">Cerrar</button>
+            <button id="tvLinkNewCodeButton" class="button primary" type="button">Nuevo código</button>
           </div>
         </div>
       </div>

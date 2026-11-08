@@ -2,9 +2,12 @@ import Foundation
 import CryptoKit
 import Security
 
-struct Gallery: Decodable, Identifiable { let id: String; let name: String }
+struct Gallery: Decodable, Identifiable { let id: String; let name: String; var count: Int? = nil; var cover: String? = nil }
 struct GalleryList: Decodable { let galleries: [Gallery] }
-struct Photo: Decodable, Identifiable { let id: String; let name: String; let folder: String; let mediaPath: String }
+struct Photo: Decodable, Identifiable {
+    let id: String; let name: String; let folder: String; let mediaPath: String
+    var displayPath: String? = nil; var thumbPath: String? = nil
+}
 struct PhotoList: Decodable { let images: [Photo] }
 struct PairResult: Decodable { let token: String }
 struct Credentials: Codable { let address: String; let fingerprint: String; let token: String }

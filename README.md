@@ -6,7 +6,7 @@ El backlog y el estado del trabajo se mantienen en [Linear: Image Viewer Pro](ht
 
 ## Prototipo para Apple TV (tvOS)
 
-Incluye una app nativa y un servidor HTTPS independiente, de solo lectura y con vinculación por código. Inicio rápido: `node tv-server.js "/ruta/a/galeria"`; abre después `tvos/ImageViewerPro.xcodeproj` en Xcode. Consulta [la guía de ejecución, seguridad y pruebas de Apple TV](tvos/README.md).
+Incluye una app nativa y un servidor HTTPS independiente, de solo lectura y con vinculación por código. Inicio rápido: `node tv-server.js install-service`, pulsa **Vincular TV** en la app de escritorio y abre `tvos/ImageViewerPro.xcodeproj` en Xcode. Consulta [la guía de ejecución, seguridad y pruebas de Apple TV](tvos/README.md).
 
 El servidor web existente queda limitado a loopback. Para compartir en la red utiliza `tv-server.js`.
 

@@ -2,29 +2,21 @@
 
 App nativa SwiftUI para tvOS 17 o posterior. Explora galerías de un computador en la misma red, abre fotografías y reproduce una presentación circular con pausa y tiempos de 5, 10 o 15 segundos. No modifica el contenido compartido.
 
-## 1. Compartir carpetas desde el computador
+## 1. Servicio en el computador
 
 Requiere Node.js 22+ y `openssl` en PATH. Desde la raíz del repositorio:
 
 ```bash
-node tv-server.js "$HOME/Pictures/Album" "/Volumes/Fotos/Viaje"
+node tv-server.js install-service   # arranca solo al iniciar sesión (macOS)
 ```
 
-Cada argumento elige una galería y todas sus subcarpetas. Las carpetas se eligen al iniciar el proceso; para cambiarlas, detenerlo y arrancar de nuevo. No se acepta elegir rutas a través de la red. No iniciar `server.js` para usar Apple TV.
+Las galerías son las carpetas que abres en la app de escritorio (`node server.js`, `http://localhost:5173`); se sincronizan solas con la TV. Solo se comparten carpetas abiertas con el selector del servidor local, porque son las que tienen una ruta real. La versión de producción no puede compartir carpetas.
 
-La terminal muestra las direcciones IPv4 de las interfaces disponibles (elegir la de la misma red de Apple TV), una huella SHA-256 y un código de 8 dígitos. Puerto predeterminado: **5443**. Permitir conexiones entrantes de Node en el firewall de macOS si se solicita. Ambos dispositivos deben poder comunicarse; una red de invitados con aislamiento de clientes impide la conexión.
+Para vincular: en la app de escritorio pulsa **Vincular TV** (riel izquierdo). Muestra un código de 8 dígitos (5 minutos, un solo uso) y la huella del certificado. En la TV elige **Fotos locales**, comprueba que la huella coincide y escribe el código. La sesión dura un año y sobrevive a reinicios.
 
-Variables opcionales: `TV_PORT=5443` y `TV_HOST=192.168.1.20` para limitar la escucha a una interfaz. Por defecto escucha en las interfaces IPv4. El computador debe permanecer encendido y el proceso activo.
+Comandos útiles: `node tv-server.js add <carpeta>` / `remove` / `list` (carpetas manuales), `pair` (código desde la terminal), `revoke` (desvincular todas las TV), `uninstall-service`. Logs: `~/.image-viewer-pro-tv/service.log`. Si mueves el repositorio, vuelve a ejecutar `install-service`.
 
-El certificado y su clave se crean automáticamente en `~/.image-viewer-pro-tv/` (directorio 0700, clave 0600). Conservarlos para mantener la huella; no compartir la clave. Si se pierden o se regeneran, hay que desvincular y comparar la nueva huella.
-
-Comandos en la terminal del servidor:
-
-- `pair`: genera otro código, válido durante cinco minutos y para una sola vinculación.
-- `revoke`: invalida inmediatamente todas las sesiones y el código pendiente.
-- `Ctrl+C`: detiene el servicio; también invalida todas las sesiones.
-
-Las sesiones duran como máximo 12 horas, no sobreviven al reinicio del servidor. Diez intentos de código fallidos bloquean la vinculación hasta ejecutar `pair` de nuevo. Para revocar un Apple TV se revocan todos en este prototipo. «Desvincular» en la app borra solo sus credenciales locales.
+Puerto predeterminado 5443 (`TV_PORT`). El servicio se anuncia por Bonjour (`_ivp-tv._tcp`). El certificado y la clave están en `~/.image-viewer-pro-tv/` (0700/0600). La app de escritorio habla con el servicio por un socket Unix privado, nunca por la red.
 
 ## 2. Ejecutar la app
 

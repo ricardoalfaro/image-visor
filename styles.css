@@ -2646,3 +2646,41 @@ body.media-strip-expanded .media-strip::after {
 .image-viewport .overlay-delete-button:hover:not(:disabled) {
   background: var(--overlay-control-hover) !important;
 }
+
+.tv-link-panel {
+  width: min(440px, 100%);
+}
+
+.tv-link-code {
+  margin: 4px 0 14px;
+  padding: 18px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font: 600 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em;
+  text-align: center;
+  user-select: all;
+}
+
+.tv-link-code.is-expired {
+  color: var(--muted);
+}
+
+.confirm-dialog-panel p.tv-link-help {
+  margin-bottom: 14px;
+}
+
+.confirm-dialog-panel p.tv-link-fingerprint {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 22px;
+  font-size: 12px;
+}
+
+.tv-link-fingerprint code {
+  color: var(--text);
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

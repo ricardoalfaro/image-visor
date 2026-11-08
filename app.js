@@ -28,6 +28,7 @@ import {
 import { loadRecentFolders } from "./src/storage.js";
 import { isFavorite, loadFavorites, toggleFavorite } from "./src/favorites.js";
 import { openDeleteConfirm, openDeleteBatchConfirm, closeDeleteConfirm, confirmDelete, trapDeleteDialogFocus } from "./src/delete.js";
+import { initializeTvLink, isTvLinkOpen, closeTvLinkDialog } from "./src/tv-link.js";
 import { createCollection, isMediaInCollection, loadCollections, toggleMediaInCollection } from "./src/collections.js";
 import { FAVORITES_FOLDER_PATH, HOME_CTA_SEEN_KEY } from "./src/constants.js";
 import {
@@ -298,6 +299,14 @@ function handleViewerOutsideClick(event) {
 }
 
 function handleKeyboard(event) {
+  if (isTvLinkOpen()) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeTvLinkDialog();
+    }
+    return;
+  }
+
   if (document.body.classList.contains("has-open-dialog")) {
     if (newCollectionDialog.getAttribute("aria-hidden") === "false") {
       if (event.key === "Escape") {
@@ -629,3 +638,4 @@ initializeToneCurveControl();
 renderImageAdjustmentControls();
 renderSortOptions();
 initializeOnboarding();
+initializeTvLink();
