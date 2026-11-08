@@ -1,5 +1,7 @@
 # Image Visor Backlog
 
+> **Archivo histórico:** el backlog y el estado vigente se mantienen en [Linear: Image Viewer Pro](https://linear.app/ricardoalfarobuilder/project/image-viewer-pro-71b8b635162c). Este documento conserva una instantánea anterior y no se actualiza como backlog.
+
 Este backlog registra las ideas nuevas para evolucionar el visor actual sin convertirlo en el editor fotografico planificado anteriormente.
 
 ## Norte Del Proyecto
@@ -23,7 +25,7 @@ El proyecto separado del editor puede servir como referencia o cantera de codigo
 - No mezclar la arquitectura completa de Image Edition Pro.
 - Rescatar piezas por valor concreto, no por arrastre historico.
 - Cada cambio debe dejar la app funcional.
-- Antes de cerrar una sesion importante, actualizar este backlog con el estado real.
+- Antes de cerrar una sesion importante, actualizar el estado real en Linear.
 
 ## Estado Actual
 

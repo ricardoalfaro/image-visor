@@ -2,6 +2,14 @@
 
 Visor local de imágenes y videos optimizado para explorar carpetas del sistema directamente desde tu navegador web. Diseñado para ofrecer una experiencia fluida, rápida y ligera, ya sea de forma 100% cliente (local) mediante las APIs modernas del navegador o a través de un servidor local de Node.js.
 
+El backlog y el estado del trabajo se mantienen en [Linear: Image Viewer Pro](https://linear.app/ricardoalfarobuilder/project/image-viewer-pro-71b8b635162c).
+
+## Prototipo para Apple TV (tvOS)
+
+Incluye una app nativa y un servidor HTTPS independiente, de solo lectura y con vinculación por código. Inicio rápido: `node tv-server.js "/ruta/a/galeria"`; abre después `tvos/ImageViewerPro.xcodeproj` en Xcode. Consulta [la guía de ejecución, seguridad y pruebas de Apple TV](tvos/README.md).
+
+El servidor web existente queda limitado a loopback. Para compartir en la red utiliza `tv-server.js`.
+
 ---
 
 ## 🛠️ Stack Tecnológico
@@ -100,9 +108,9 @@ Una de las funcionalidades avanzadas es la persistencia de favoritos:
 3. Concede permisos para leer el directorio local. La aplicación procesará y estructurará todo el contenido sin subir nada a internet.
 
 ### Uso con Servidor Local Node.js
-1. Levanta el servidor especificando la ruta de la carpeta que deseas indexar:
+1. Levanta el servidor y elige la carpeta desde la interfaz web:
    ```bash
-   node server.js /ruta/a/tus/imagenes_o_videos
+   node server.js
    ```
 2. Accede a `http://127.0.0.1:5173` en tu navegador para interactuar con la galería.
 

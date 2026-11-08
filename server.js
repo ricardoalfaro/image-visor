@@ -33,6 +33,9 @@ const VIDEO_EXTENSION_PATTERN = /\.(m4v|mov|mp4|mpe?g)$/i;
 const appRoot = __dirname;
 const port = Number(process.env.PORT || 5173);
 const host = process.env.HOST || "127.0.0.1";
+if (!["127.0.0.1", "::1", "localhost"].includes(host)) {
+  throw new Error("Desktop server is loopback-only. Use tv-server.js for authenticated, read-only LAN sharing.");
+}
 const allowedMediaRoots = new Set();
 const execFileAsync = promisify(execFile);
 

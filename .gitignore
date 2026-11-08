@@ -5,3 +5,8 @@ dist/
 .env.local
 
 .vercel
+
+# Xcode local state
+DerivedData/
+*.xcuserstate
+xcuserdata/
