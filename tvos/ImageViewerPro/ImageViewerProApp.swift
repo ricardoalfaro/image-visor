@@ -42,7 +42,7 @@ final class ImageStore {
 
     func cached(_ path: String, maxPixel: Int) -> UIImage? { cache.object(forKey: key(path, maxPixel)) }
 
-    func image(_ path: String, client: ShareClient, maxPixel: Int) async throws -> UIImage {
+    func image(_ path: String, client: ShareClient, maxPixel: Int, cache useCache: Bool = true) async throws -> UIImage {
         let cacheKey = key(path, maxPixel)
         if let hit = cache.object(forKey: cacheKey) { return hit }
         let taskKey = "\(path)#\(maxPixel)"
@@ -54,7 +54,8 @@ final class ImageStore {
         tasks[taskKey] = task
         defer { tasks[taskKey] = nil }
         let image = try await task.value
-        cache.setObject(image, forKey: cacheKey, cost: Int(image.size.width * image.size.height * 4))
+        // Very large zoom images are not cached so they do not evict the next photos.
+        if useCache { cache.setObject(image, forKey: cacheKey, cost: Int(image.size.width * image.size.height * 4)) }
         return image
     }
 
@@ -157,76 +158,95 @@ final class ComputerFinder: NSObject, ObservableObject, NetServiceBrowserDelegat
     }
 }
 
+/// Just the code: type the 8 digits shown on the computer and the TV links itself.
 struct PairView: View {
     @EnvironmentObject private var model: LibraryModel
     @Binding var source: PhotoSource?
     @StateObject private var finder = ComputerFinder()
-    @State private var address = "https://"
-    @State private var code = ""
-    @State private var fingerprint: String?
-    @State private var verifiedAddress = ""
+    @State private var digits = ""
     @State private var busy = false
-    @State private var manual = false
+    @State private var message: String?
+    @State private var searchTimedOut = false
+    private let rows = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"], ["", "0", "⌫"]]
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                Label("Esperando el código", systemImage: "link").font(.largeTitle)
-                Text("En tu computador abre Image Viewer Pro y pulsa «Vincular TV». Escribe aquí el código que aparece.").font(.title3)
-                if finder.computers.isEmpty {
-                    Text("Buscando tu computador… Comprueba que el servicio esté activo y que ambos equipos estén en la misma red.").foregroundStyle(.secondary)
-                } else if fingerprint == nil {
-                    Text("Computadores encontrados").font(.headline)
-                    ForEach(finder.computers) { computer in
-                        Button { address = computer.address; Task { await probe() } } label: {
-                            Label(computer.name, systemImage: "desktopcomputer")
+        VStack(spacing: 50) {
+            HStack(spacing: 14) {
+                ForEach(0..<8, id: \.self) { slot in
+                    if slot == 4 { Color.clear.frame(width: 26, height: 1) }
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18).fill(.white.opacity(slot < digits.count ? 0.22 : 0.09))
+                        if slot < digits.count {
+                            Text(String(digits[digits.index(digits.startIndex, offsetBy: slot)]))
+                                .font(.system(size: 64, weight: .semibold, design: .rounded))
+                        }
+                    }.frame(width: 92, height: 118)
+                }
+            }
+            VStack(spacing: 18) {
+                ForEach(rows, id: \.self) { row in
+                    HStack(spacing: 18) {
+                        ForEach(row, id: \.self) { key in
+                            if key.isEmpty { Color.clear.frame(width: 130, height: 84) }
+                            else {
+                                Button { press(key) } label: {
+                                    Group { if key == "⌫" { Image(systemName: "delete.left") } else { Text(key) } }
+                                        .font(.title).frame(width: 130, height: 84)
+                                }
+                            }
                         }
                     }
                 }
-                Button(manual ? "Ocultar dirección manual" : "Introducir la dirección a mano") { manual.toggle() }
-                if manual {
-                    TextField("Dirección HTTPS del computador", text: $address).autocorrectionDisabled().textInputAutocapitalization(.never)
-                    Button(busy ? "Conectando…" : "Comprobar computador") { Task { await probe() } }.disabled(busy)
-                }
-                if let fingerprint {
-                    Text("Comprueba que esta huella sea la misma que muestra «Vincular TV» en el computador. Si no coincide, no continúes.")
-                    Text(fingerprint).font(.system(size: 24, design: .monospaced))
-                    TextField("Código de 8 dígitos", text: $code)
-                    Button("La huella coincide · Vincular") { Task { await pair(fingerprint) } }.disabled(busy || digits.count != 8)
-                }
-                Button("Cambiar origen") { source = nil }.foregroundStyle(.secondary)
-            }.frame(maxWidth: 1100).padding(70)
+            }.disabled(busy)
+            // Only speaks up when something is wrong.
+            Group {
+                if busy { ProgressView() }
+                else if let message { Text(message).foregroundStyle(.red) }
+                else if finder.computers.isEmpty && searchTimedOut { Label("No encuentro tu computador", systemImage: "wifi.exclamationmark").foregroundStyle(.secondary) }
+                else { Color.clear }
+            }.frame(height: 50).font(.title3)
         }
+        .padding(60)
         .onAppear { finder.start() }
         .onDisappear { finder.stop() }
-        .onChange(of: address) { _, _ in fingerprint = nil }
-        // With a single computer on the network there is nothing to choose: read its certificate right away.
-        .onChange(of: finder.computers) { _, computers in
-            if computers.count == 1, fingerprint == nil, !busy, let only = computers.first { address = only.address; Task { await probe() } }
+        .onChange(of: digits) { _, value in if value.count == 8 { Task { await submit() } } }
+        .onExitCommand { source = nil }
+        .task { try? await Task.sleep(for: .seconds(8)); searchTimedOut = true }
+    }
+
+    private func press(_ key: String) {
+        message = nil
+        if key == "⌫" { if !digits.isEmpty { digits.removeLast() } }
+        else if digits.count < 8 { digits.append(key) }
+    }
+
+    private func submit() async {
+        busy = true; defer { busy = false }
+        let code = digits
+        do {
+            guard let computer = finder.computers.first else { throw ShareError.message("No encuentro tu computador") }
+            let fingerprint = try await readFingerprint(computer.address)
+            let client = try ShareClient(address: computer.address, fingerprint: fingerprint)
+            let result = try await client.decode(PairResult.self, path: "/v1/pair", code: code)
+            try CredentialStore.save(Credentials(address: computer.address, fingerprint: fingerprint, token: result.token))
+            model.client = try ShareClient(address: computer.address, fingerprint: fingerprint, token: result.token)
+        } catch {
+            let text = error.localizedDescription
+            message = text.contains("403") ? "Código incorrecto" : text.contains("429") || text.contains("caducado") ? "Código caducado. Genera uno nuevo." : text
+            digits = ""
         }
     }
-    private var digits: String { code.filter(\.isNumber) }
-    private func probe() async {
-        busy = true; fingerprint = nil; defer { busy = false }
-        do {
-            let validation = try ShareClient(address: address, fingerprint: "")
-            let delegate = CertificateProbe()
-            let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForRequest = 15
-            let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-            defer { session.invalidateAndCancel() }
-            _ = try? await session.data(from: validation.base)
-            guard let found = delegate.fingerprint else { throw ShareError.message("No se pudo leer el certificado. Revisa dirección, Wi-Fi y firewall.") }
-            verifiedAddress = address; fingerprint = found
-        } catch { model.error = error.localizedDescription }
-    }
-    private func pair(_ fingerprint: String) async {
-        busy = true; defer { busy = false }
-        do {
-            guard verifiedAddress == address else { throw ShareError.message("Comprueba de nuevo el computador.") }
-            let client = try ShareClient(address: verifiedAddress, fingerprint: fingerprint)
-            let result = try await client.decode(PairResult.self, path: "/v1/pair", code: digits)
-            try CredentialStore.save(Credentials(address: verifiedAddress, fingerprint: fingerprint, token: result.token))
-            model.client = try ShareClient(address: verifiedAddress, fingerprint: fingerprint, token: result.token)
-        } catch { model.error = error.localizedDescription }
+
+    /// Reads the server certificate and pins it; the code is only sent over that pinned connection.
+    private func readFingerprint(_ address: String) async throws -> String {
+        let validation = try ShareClient(address: address, fingerprint: "")
+        let delegate = CertificateProbe()
+        let config = URLSessionConfiguration.ephemeral; config.timeoutIntervalForRequest = 15
+        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
+        defer { session.invalidateAndCancel() }
+        _ = try? await session.data(from: validation.base)
+        guard let found = delegate.fingerprint else { throw ShareError.message("No se pudo conectar con el computador") }
+        return found
     }
 }
 
@@ -256,10 +276,21 @@ struct HomeView: View {
     @AppStorage("slideshowSeconds") private var seconds = 8
     @AppStorage("shuffle") private var shuffle = false
     @State private var opened: Gallery?
+    @State private var hint: String?
     private let intervals = [5, 8, 15, 30]
     private var folders: [Gallery] { model.galleries.filter { $0.kind != "collection" } }
     // Favoritos and collections are copies kept by the desktop app; empty ones are hidden.
     private var collections: [Gallery] { model.galleries.filter { $0.kind == "collection" && ($0.count ?? 0) > 0 } }
+
+    /// Icon-only toolbar button; the accessibility label keeps VoiceOver working.
+    private func toolButton(_ label: String, _ symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Label(label, systemImage: symbol).labelStyle(.iconOnly).font(.title3).frame(width: 64, height: 40) }
+    }
+
+    private func flash(_ text: String) {
+        withAnimation { hint = text }
+        Task { try? await Task.sleep(for: .seconds(1.6)); withAnimation { if hint == text { hint = nil } } }
+    }
 
     private func galleryGrid(_ items: [Gallery], client: ShareClient) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 440), spacing: 50)], spacing: 50) {
@@ -282,7 +313,22 @@ struct HomeView: View {
         if let client = model.client {
             ScrollView {
                 VStack(alignment: .leading, spacing: 40) {
-                    Text("Galerías").font(.largeTitle).bold()
+                    HStack(spacing: 28) {
+                        Text("Galerías").font(.largeTitle).bold()
+                        Spacer()
+                        if let hint { Text(hint).font(.callout).foregroundStyle(.secondary).transition(.opacity) }
+                        toolButton("Tiempo de presentación", "timer") {
+                            seconds = intervals[((intervals.firstIndex(of: seconds) ?? -1) + 1) % intervals.count]
+                            flash("Presentación: \(seconds) s")
+                        }
+                        toolButton(shuffle ? "Orden aleatorio" : "Orden secuencial", shuffle ? "shuffle" : "arrow.right") {
+                            shuffle.toggle()
+                            flash(shuffle ? "Orden aleatorio" : "Orden secuencial")
+                        }
+                        toolButton("Actualizar", "arrow.clockwise") { Task { await model.refresh() }; flash("Actualizando…") }
+                        toolButton("Cambiar origen", "rectangle.2.swap") { source = nil }
+                        toolButton("Desvincular computador", "power") { model.unlink() }
+                    }
                     if folders.isEmpty && collections.isEmpty && model.loaded {
                         Text("No hay galerías disponibles. En el computador, abre carpetas en Image Viewer Pro y pulsa «Vincular TV».").foregroundStyle(.secondary)
                     }
@@ -290,13 +336,6 @@ struct HomeView: View {
                     if !collections.isEmpty {
                         Text("Colecciones").font(.largeTitle).bold().padding(.top, 20)
                         galleryGrid(collections, client: client)
-                    }
-                    HStack(spacing: 30) {
-                        Button("Presentación: \(seconds) s") { seconds = intervals[((intervals.firstIndex(of: seconds) ?? -1) + 1) % intervals.count] }
-                        Button(shuffle ? "Orden: aleatorio" : "Orden: secuencial") { shuffle.toggle() }
-                        Button("Actualizar") { Task { await model.refresh() } }
-                        Button("Cambiar origen") { source = nil }
-                        Button("Desvincular", role: .destructive) { model.unlink() }
                     }
                 }.padding(60)
             }
@@ -330,19 +369,30 @@ struct ViewerScreen: View {
     @State private var infoVisible = false
     @State private var toast: String?
     @State private var infoTimer: Task<Void, Never>?
+    @State private var zoomLevel = 0
+    @State private var offset = CGSize.zero
+    @State private var zoomImage: UIImage?
+    @State private var zoomTask: Task<Void, Never>?
+    @State private var viewSize = CGSize.zero
+    @State private var zoomBadge: String?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
 
     enum LoadStatus: Equatable { case loading, ready, failed(String) }
     private let screenPixels = 2560
+    private let zoomPixels = 6144
+    private let zoomScales: [CGFloat] = [1, 2, 3.5, 5, 8]
+    private var scale: CGFloat { zoomScales[zoomLevel] }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            if let shown {
-                Image(uiImage: shown).resizable().scaledToFit().ignoresSafeArea()
-                    .id(shownIndex).transition(.opacity)
+            if let image = zoomImage ?? shown {
+                Image(uiImage: image).resizable().scaledToFit()
+                    .frame(width: viewSize.width, height: viewSize.height)
+                    .scaleEffect(scale).offset(offset)
+                    .ignoresSafeArea().id(shownIndex).transition(.opacity)
             }
             switch status {
             case .loading where shown == nil: ProgressView().scaleEffect(2)
@@ -364,25 +414,35 @@ struct ViewerScreen: View {
                     .background(LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                 }.transition(.opacity).allowsHitTesting(false)
             }
+            if let zoomBadge {
+                VStack { HStack { Spacer()
+                    Label(zoomBadge, systemImage: "plus.magnifyingglass").font(.title3)
+                        .padding(.horizontal, 24).padding(.vertical, 12).background(.ultraThinMaterial, in: Capsule())
+                }; Spacer() }.padding(50).transition(.opacity).allowsHitTesting(false)
+            }
             if let toast {
                 Label(toast, systemImage: playing ? "play.fill" : "pause.fill").font(.title3)
                     .padding(.horizontal, 28).padding(.vertical, 16).background(.ultraThinMaterial, in: Capsule())
                     .transition(.opacity).allowsHitTesting(false)
             }
         }
+        .background(GeometryReader { geo in Color.clear.onAppear { viewSize = geo.size }.onChange(of: geo.size) { _, size in viewSize = size } }.ignoresSafeArea())
         .focusable().focused($focused).focusEffectDisabled()
         .onMoveCommand { direction in
+            if zoomLevel > 0 { pan(direction); return }
             if direction == .left { move(-1) }
             if direction == .right { move(1) }
+            if direction == .up { flashInfo() }
         }
-        .onTapGesture { if case .failed = status, shown == nil { Task { await load() } } else { flashInfo() } }
-        .onPlayPauseCommand { togglePlaying() }
-        .onExitCommand { dismiss() }
+        // Select: zoom in (and keep zooming). Menu: zoom out one step, then close the viewer.
+        .onTapGesture { if case .failed = status, shown == nil { Task { await load() } } else { zoomIn() } }
+        .onPlayPauseCommand { if zoomLevel == 0 { togglePlaying() } }
+        .onExitCommand { if zoomLevel > 0 { zoomOut() } else { dismiss() } }
         .onChange(of: scenePhase) { _, phase in if phase != .active { playing = false } }
         .onAppear { focused = true; UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { playing = false; UIApplication.shared.isIdleTimerDisabled = false }
         .task { await load() }
-        .task(id: index) { await show(index) }
+        .task(id: index) { resetZoom(); await show(index) }
         .task(id: SlideKey(playing: playing, index: index, shownIndex: shownIndex, seconds: seconds)) {
             guard playing, shownIndex == index else { return }
             do { try await Task.sleep(for: .seconds(seconds)); try Task.checkCancellation(); move(1) } catch {}
@@ -423,6 +483,73 @@ struct ViewerScreen: View {
             if shown == nil { status = .failed(error.localizedDescription) }
             else if playing { move(1) } // skip a photo that cannot be read
         }
+    }
+
+    private func fitSize(_ image: CGSize, in container: CGSize) -> CGSize {
+        let ratio = min(container.width / image.width, container.height / image.height)
+        return CGSize(width: image.width * ratio, height: image.height * ratio)
+    }
+
+    /// Keeps the zoomed photo from being dragged past its own edges.
+    private func clamp(_ value: CGSize, level: Int) -> CGSize {
+        guard let image = zoomImage ?? shown, viewSize.width > 0, image.size.width > 0 else { return .zero }
+        let fit = fitSize(image.size, in: viewSize)
+        let factor = zoomScales[level]
+        let maxX = max(0, (fit.width * factor - viewSize.width) / 2)
+        let maxY = max(0, (fit.height * factor - viewSize.height) / 2)
+        return CGSize(width: min(max(value.width, -maxX), maxX), height: min(max(value.height, -maxY), maxY))
+    }
+
+    private func zoomIn() {
+        guard shown != nil, photos.indices.contains(index) else { return }
+        if zoomLevel == 0 {
+            playing = false
+            loadZoomImage()
+        }
+        let next = min(zoomLevel + 1, zoomScales.count - 1)
+        withAnimation(.easeInOut(duration: 0.3)) { zoomLevel = next; offset = clamp(offset, level: next) }
+        flashBadge()
+    }
+
+    private func zoomOut() {
+        let next = max(zoomLevel - 1, 0)
+        withAnimation(.easeInOut(duration: 0.3)) { zoomLevel = next; offset = next == 0 ? .zero : clamp(offset, level: next) }
+        if next == 0 { zoomTask?.cancel(); zoomImage = nil } else { flashBadge() }
+    }
+
+    private func resetZoom() {
+        zoomTask?.cancel(); zoomImage = nil; zoomLevel = 0; offset = .zero
+    }
+
+    private func pan(_ direction: MoveCommandDirection) {
+        let stepX = viewSize.width * 0.14, stepY = viewSize.height * 0.14
+        var next = offset
+        switch direction { // moving right reveals the right side, so the photo shifts left
+        case .left: next.width += stepX
+        case .right: next.width -= stepX
+        case .up: next.height += stepY
+        case .down: next.height -= stepY
+        @unknown default: break
+        }
+        withAnimation(.easeOut(duration: 0.18)) { offset = clamp(next, level: zoomLevel) }
+    }
+
+    /// The screen-size copy gets soft when magnified, so fetch the original at higher resolution.
+    private func loadZoomImage() {
+        zoomTask?.cancel()
+        guard photos.indices.contains(index) else { return }
+        let photo = photos[index]; let target = index
+        zoomTask = Task {
+            guard let image = try? await ImageStore.shared.image(photo.mediaPath, client: client, maxPixel: zoomPixels, cache: false),
+                  !Task.isCancelled, zoomLevel > 0, index == target else { return }
+            zoomImage = image
+        }
+    }
+
+    private func flashBadge() {
+        let text = String(format: "%g×", Double(zoomScales[zoomLevel]))
+        withAnimation { zoomBadge = text }
+        Task { try? await Task.sleep(for: .seconds(1.4)); withAnimation { if zoomBadge == text { zoomBadge = nil } } }
     }
 
     private func move(_ delta: Int) {
