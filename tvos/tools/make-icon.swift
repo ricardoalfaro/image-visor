@@ -98,4 +98,16 @@ for stack in stacks {
         try render(layer, width: stack.width * 2, height: stack.height * 2, to: URL(fileURLWithPath: "\(set)/\(name.lowercased())@2x.png"))
     }
 }
+// Flat logo (all layers composited) used inside the app, e.g. on the source chooser.
+let logoSet = "\(catalog)/AppLogo.imageset"
+try writeJSON(["images": [["idiom": "universal", "filename": "logo.png", "scale": "1x"], ["idiom": "universal", "filename": "logo@2x.png", "scale": "2x"]], "info": info] as [String: Any], to: "\(logoSet)/Contents.json")
+for (name, scaleFactor) in [("logo", 1), ("logo@2x", 2)] {
+    let w = 1280 * scaleFactor / 2, h = 768 * scaleFactor / 2
+    let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    ctx.scaleBy(x: CGFloat(w) / 1280, y: CGFloat(h) / 768)
+    for layer in [Layer.back, .middle, .front] { draw(layer, in: ctx) }
+    let dest = CGImageDestinationCreateWithURL(URL(fileURLWithPath: "\(logoSet)/\(name).png") as CFURL, UTType.png.identifier as CFString, 1, nil)!
+    CGImageDestinationAddImage(dest, ctx.makeImage()!, nil)
+    guard CGImageDestinationFinalize(dest) else { throw CocoaError(.fileWriteUnknown) }
+}
 print("Icon written to \(catalog)")

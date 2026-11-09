@@ -83,10 +83,13 @@ struct RootView: View {
     @EnvironmentObject private var model: LibraryModel
     @State private var source: PhotoSource?
     var body: some View {
-        Group {
-            switch source {
-            case .none: SourceChooser(source: $source)
-            case .local: if model.client != nil { HomeView(source: $source) } else { PairView(source: $source) }
+        ZStack {
+            AuroraBackground().ignoresSafeArea()
+            Group {
+                switch source {
+                case .none: SourceChooser(source: $source)
+                case .local: if model.client != nil { HomeView(source: $source) } else { PairView(source: $source) }
+                }
             }
         }
         .alert("No se pudo conectar", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
@@ -97,13 +100,34 @@ struct RootView: View {
 
 enum PhotoSource { case local }
 
+/// Near-black canvas with a yellow glow top-left and an orange one top-right that drift slowly.
+struct AuroraBackground: View {
+    @State private var drift = false
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Color(red: 0.04, green: 0.04, blue: 0.04)
+                Circle().fill(Color(red: 1.0, green: 0.93, blue: 0.0).opacity(0.85))
+                    .frame(width: geo.size.width * 0.5).blur(radius: 170)
+                    .offset(x: -geo.size.width * (drift ? 0.34 : 0.42), y: -geo.size.height * (drift ? 0.34 : 0.28))
+                Circle().fill(Color(red: 1.0, green: 0.45, blue: 0.0).opacity(0.8))
+                    .frame(width: geo.size.width * 0.42).blur(radius: 170)
+                    .offset(x: geo.size.width * (drift ? 0.42 : 0.34), y: -geo.size.height * (drift ? 0.30 : 0.38))
+            }
+            .frame(width: geo.size.width, height: geo.size.height).clipped()
+        }
+        .onAppear { withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { drift = true } }
+    }
+}
+
 /// First screen on every launch: where do the photos come from?
 struct SourceChooser: View {
     @Binding var source: PhotoSource?
     var body: some View {
         VStack(spacing: 60) {
             VStack(spacing: 12) {
-                Image(systemName: "photo.on.rectangle.angled").font(.system(size: 90))
+                Image("AppLogo").resizable().scaledToFit().frame(width: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous)).shadow(color: .black.opacity(0.5), radius: 30, y: 12)
                 Text("Image Viewer Pro").font(.largeTitle).bold()
                 Text("¿Desde dónde quieres ver tus fotos?").font(.title3).foregroundStyle(.secondary)
             }
@@ -255,6 +279,7 @@ struct PairView: View {
 struct CoverImage: View {
     let path: String?
     let client: ShareClient
+    var maxPixel = 800
     @State private var image: UIImage?
     var body: some View {
         ZStack {
@@ -264,7 +289,7 @@ struct CoverImage: View {
         }
         .task(id: path) {
             guard let path else { return }
-            image = try? await ImageStore.shared.image(path, client: client, maxPixel: 800)
+            image = try? await ImageStore.shared.image(path, client: client, maxPixel: maxPixel)
         }
     }
 }
@@ -276,6 +301,8 @@ struct HomeView: View {
     @AppStorage("slideshowSeconds") private var seconds = 8
     @AppStorage("shuffle") private var shuffle = false
     @State private var opened: Gallery?
+    @State private var browsing: Gallery?
+    @State private var longPressed = false
     @State private var hint: String?
     private let intervals = [5, 8, 15, 30]
     private var folders: [Gallery] { model.galleries.filter { $0.kind != "collection" } }
@@ -295,7 +322,9 @@ struct HomeView: View {
     private func galleryGrid(_ items: [Gallery], client: ShareClient) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 440), spacing: 50)], spacing: 50) {
             ForEach(items) { gallery in
-                Button { opened = gallery } label: {
+                Button {
+                    if longPressed { longPressed = false } else { opened = gallery }
+                } label: {
                     ZStack(alignment: .bottomLeading) {
                         CoverImage(path: gallery.cover, client: client).frame(height: 280).clipped()
                         LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
@@ -305,6 +334,8 @@ struct HomeView: View {
                         }.padding(20)
                     }
                 }.buttonStyle(.card)
+                // Holding Select opens the thumbnail grid instead of the slideshow.
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in longPressed = true; browsing = gallery })
             }
         }
     }
@@ -346,6 +377,52 @@ struct HomeView: View {
             .fullScreenCover(item: $opened, onDismiss: { Task { await model.refresh() } }) { gallery in
                 ViewerScreen(gallery: gallery, client: client, seconds: seconds, shuffle: shuffle)
             }
+            .fullScreenCover(item: $browsing) { gallery in
+                ThumbnailsScreen(gallery: gallery, client: client, seconds: seconds)
+            }
+        }
+    }
+}
+
+// MARK: - Thumbnails
+
+/// Grid of thumbnails for one gallery; selecting a photo opens the viewer on it.
+struct ThumbnailsScreen: View {
+    let gallery: Gallery
+    let client: ShareClient
+    let seconds: Int
+    @State private var photos: [Photo] = []
+    @State private var loading = true
+    @State private var open: Photo?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            AuroraBackground().ignoresSafeArea()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 30) {
+                    Text(gallery.name).font(.largeTitle).bold()
+                    if loading { ProgressView() }
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 28), count: 6), spacing: 28) {
+                        ForEach(photos) { photo in
+                            Button { open = photo } label: {
+                                // Fixed 4:3 cell; the photo fills it and is cropped, so every tile is identical.
+                                Color.clear.aspectRatio(4.0 / 3.0, contentMode: .fit)
+                                    .overlay(CoverImage(path: photo.thumbPath ?? photo.displayPath, client: client, maxPixel: 480))
+                                    .clipped()
+                            }.buttonStyle(.card)
+                        }
+                    }
+                }.padding(60)
+            }
+        }
+        .onExitCommand { dismiss() }
+        .task {
+            photos = (try? await client.decode(PhotoList.self, path: "/v1/galleries/\(gallery.id)").images) ?? []
+            loading = false
+        }
+        .fullScreenCover(item: $open) { photo in
+            ViewerScreen(gallery: gallery, client: client, seconds: seconds, shuffle: false, startID: photo.id)
         }
     }
 }
@@ -359,6 +436,7 @@ struct ViewerScreen: View {
     let client: ShareClient
     let seconds: Int
     let shuffle: Bool
+    var startID: String? = nil
 
     @State private var photos: [Photo] = []
     @State private var index = 0
@@ -456,10 +534,11 @@ struct ViewerScreen: View {
         do {
             var list = try await client.decode(PhotoList.self, path: "/v1/galleries/\(gallery.id)").images
             guard !list.isEmpty else { status = .failed("Esta galería no tiene fotos JPEG, PNG o HEIC."); return }
-            if shuffle { list.shuffle() }
+            if shuffle && startID == nil { list.shuffle() }
             photos = list
             let saved = shuffle ? 0 : UserDefaults.standard.integer(forKey: "position.\(gallery.id)")
             index = list.indices.contains(saved) ? saved : 0
+            if let startID, let start = list.firstIndex(where: { $0.id == startID }) { index = start }
             await show(index)
         } catch { status = .failed(error.localizedDescription) }
     }
