@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import {
   tvLinkButton, tvLinkDialog, tvLinkStatus, tvLinkCode, tvLinkHelp, tvLinkFingerprint,
-  tvLinkRevokeButton, tvLinkCloseButton, tvLinkNewCodeButton,
+  tvLinkRevokeButton, tvLinkCloseButton, tvLinkNewCodeButton, tvLinkSyncButton,
 } from "./dom.js";
 import { showNotice } from "./ui.js";
 import { getFavoriteKey } from "./favorites.js";
@@ -13,7 +13,6 @@ let collectionsDirty = false;
 const CODE_LIFETIME_MS = 5 * 60 * 1000;
 let countdownTimer = 0;
 let statusTimer = 0;
-let syncTimer = 0;
 let codeExpiresAt = 0;
 
 // Linking only works with the local Node server, which can read real folder paths.
@@ -43,22 +42,34 @@ export function getShareableFolders() {
 }
 
 export async function syncTvGalleries() {
-  const folders = getShareableFolders();
-
-  // Never wipe the TV's list because this browser profile has no history yet.
-  if (!isLocalServerHost() || !folders.length) {
+  if (!isLocalServerHost()) {
     return null;
   }
 
-  return await tvApi("galleries", { folders });
+  // Explicit action: whatever this browser profile has replaces the TV's list, even if it is empty.
+  return await tvApi("galleries", { folders: getShareableFolders() });
 }
 
-function scheduleSync() {
-  window.clearTimeout(syncTimer);
-  syncTimer = window.setTimeout(() => {
-    syncTvGalleries();
-    syncTvCollections();
-  }, 800);
+/** "Sincronizar con TV": this browser profile becomes the content of the Apple TV. */
+async function syncNow() {
+  tvLinkSyncButton.disabled = true;
+  const label = tvLinkSyncButton.textContent;
+  tvLinkSyncButton.textContent = "Sincronizando…";
+
+  try {
+    const galleries = await syncTvGalleries();
+    await syncTvCollections();
+
+    if (galleries && galleries.ok === false) {
+      showNotice(galleries.error || "No se pudo sincronizar con la TV.", "warning");
+    } else {
+      const count = getShareableFolders().length;
+      showNotice(`TV sincronizada: ${count} ${count === 1 ? "galería" : "galerías"}.`, "info");
+    }
+  } finally {
+    tvLinkSyncButton.textContent = label;
+    tvLinkSyncButton.disabled = false;
+  }
 }
 
 /** Collections and Favoritos only exist in this browser, so their photos are copied to the TV service. */
@@ -93,17 +104,6 @@ export async function syncTvCollections() {
     do {
       collectionsDirty = false;
       const groups = getCollectionGroups();
-      let hadSynced = false;
-
-      try {
-        hadSynced = localStorage.getItem(COLLECTIONS_SYNCED_KEY) === "true";
-      } catch (error) {}
-
-      // Never wipe the TV's collections because this browser profile has none yet.
-      if (!groups.length && !hadSynced) {
-        continue;
-      }
-
       const blobsByFile = new Map();
       const collections = groups.map((group) => ({
         id: group.id,
@@ -230,10 +230,12 @@ export async function openTvLinkDialog() {
   if (!status.running) {
     tvLinkHelp.textContent = "";
     tvLinkNewCodeButton.disabled = true;
+    tvLinkSyncButton.disabled = true;
     return;
   }
 
   tvLinkNewCodeButton.disabled = false;
+  tvLinkSyncButton.disabled = false;
   await requestCode();
 
   // Show "TV vinculada" as soon as the Apple TV uses the code.
@@ -278,9 +280,6 @@ export async function initializeTvLink() {
     await refreshStatus();
   });
 
-  // Keep the Apple TV's galleries equal to the folders added on the desktop.
-  window.addEventListener("image-visor:recent-folders-updated", scheduleSync);
-  window.addEventListener("image-visor:collections-updated", scheduleSync);
-  syncTvGalleries();
-  syncTvCollections();
+  // Nothing is sent to the TV until this button is pressed; the last profile to sync wins.
+  tvLinkSyncButton.addEventListener("click", syncNow);
 }

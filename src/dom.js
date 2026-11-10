@@ -74,3 +74,4 @@ export const tvLinkFingerprint = document.querySelector("#tvLinkFingerprint");
 export const tvLinkRevokeButton = document.querySelector("#tvLinkRevokeButton");
 export const tvLinkCloseButton = document.querySelector("#tvLinkCloseButton");
 export const tvLinkNewCodeButton = document.querySelector("#tvLinkNewCodeButton");
+export const tvLinkSyncButton = document.querySelector("#tvLinkSyncButton");
