@@ -7,6 +7,8 @@ struct GalleryList: Decodable { let galleries: [Gallery] }
 struct Photo: Decodable, Identifiable {
     let id: String; let name: String; let folder: String; let mediaPath: String
     var displayPath: String? = nil; var thumbPath: String? = nil
+    var type: String? = nil
+    var isVideo: Bool { type == "video" }
 }
 struct PhotoList: Decodable { let images: [Photo] }
 struct PairResult: Decodable { let token: String }
@@ -98,6 +100,19 @@ struct ShareClient {
             throw ShareError.message("El computador rechazó la solicitud (\(http.statusCode)). Revisa el código y la carpeta.")
         }
         return data
+    }
+    /// One byte range of a large file (videos); returns the data and the total file size.
+    func range(_ path: String, from: Int, to: Int) async throws -> (data: Data, total: Int) {
+        guard path.hasPrefix("/v1/"), let url = URL(string: path, relativeTo: base)?.absoluteURL,
+              url.host == base.host, url.port == base.port else { throw ShareError.message("Ruta no válida.") }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("bytes=\(from)-\(to)", forHTTPHeaderField: "Range")
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 206 || http.statusCode == 200 else { throw ShareError.message("No se pudo leer el video.") }
+        var total = data.count
+        if let header = http.value(forHTTPHeaderField: "Content-Range"), let size = header.split(separator: "/").last, let value = Int(size) { total = value }
+        return (data, total)
     }
     func decode<T: Decodable>(_ type: T.Type, path: String, code: String? = nil) async throws -> T {
         try JSONDecoder().decode(type, from: await request(path, code: code))

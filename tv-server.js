@@ -22,7 +22,11 @@ const { promisify } = require('node:util');
 const execFileAsync = promisify(execFile);
 
 const FORMATS = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.heic': 'image/heic' };
+const VIDEO_FORMATS = { '.mp4': 'video/mp4', '.m4v': 'video/x-m4v', '.mov': 'video/quicktime' };
+const MEDIA_FORMATS = { ...FORMATS, ...VIDEO_FORMATS };
+const isVideo = file => Boolean(VIDEO_FORMATS[path.extname(file).toLowerCase()]);
 const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 64 * 1024 * 1024 * 1024;
 const DISPLAY_PX = 2560;
 const THUMB_PX = 640;
 const SCAN_TTL_MS = 20000;
@@ -160,12 +164,12 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
       const resolved = await fsp.realpath(file);
       if (!inside(root.root, resolved)) continue;
       if (entry.isDirectory()) await scan(root, file, result);
-      else if (entry.isFile() && FORMATS[path.extname(file).toLowerCase()]) {
-        if ((await fsp.stat(file)).size > MAX_IMAGE_BYTES) continue;
+      else if (entry.isFile() && MEDIA_FORMATS[path.extname(file).toLowerCase()]) {
+        if ((await fsp.stat(file)).size > (isVideo(file) ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES)) continue;
         const id = crypto.createHash('sha256').update(root.id + path.relative(root.root, file)).digest('hex');
         files.set(id, { root: root.root, file });
         result.push({
-          id, name: entry.name, folder: path.relative(root.root, dir),
+          id, name: entry.name, folder: path.relative(root.root, dir), type: isVideo(file) ? 'video' : 'image',
           mediaPath: `/v1/images/${id}`, displayPath: `/v1/display/${id}`, thumbPath: `/v1/thumbs/${id}`,
         });
       }
@@ -209,7 +213,15 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
       inflight.set(out, limited(async () => {
         const tmp = `${out}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp.jpg`;
         try {
-          await execFileAsync('sips', ['-Z', String(px), '-s', 'format', 'jpeg', '-s', 'formatOptions', '82', real, '--out', tmp], { timeout: 60000 });
+          let source = real;
+          let posterDir;
+          if (isVideo(real)) { // first frame through Quick Look, then the usual resize
+            posterDir = await fsp.mkdtemp(path.join(cacheDir, 'poster-'));
+            await execFileAsync('qlmanage', ['-t', '-s', String(px), '-o', posterDir, real], { timeout: 60000 });
+            source = path.join(posterDir, `${path.basename(real)}.png`);
+          }
+          try { await execFileAsync('sips', ['-Z', String(px), '-s', 'format', 'jpeg', '-s', 'formatOptions', '82', source, '--out', tmp], { timeout: 60000 }); }
+          finally { if (posterDir) await fsp.rm(posterDir, { recursive: true, force: true }); }
           await fsp.rename(tmp, out);
         } finally { await fsp.rm(tmp, { force: true }); }
       }).finally(() => inflight.delete(out)));
@@ -218,10 +230,21 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
     return out;
   }
 
+  // Supports HTTP byte ranges: AVPlayer seeks inside videos through them.
   async function sendStream(req, res, handle, stat, contentType) {
-    res.writeHead(200, { 'Content-Type': contentType, 'Content-Length': stat.size, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
-    if (req.method === 'HEAD') return res.end();
-    const stream = handle.createReadStream({ autoClose: false });
+    const headers = { 'Content-Type': contentType, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' };
+    let start = 0, end = stat.size - 1, status = 200;
+    const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+    if (range && (range[1] || range[2])) {
+      if (range[1] === '') start = Math.max(0, stat.size - Number(range[2]));
+      else { start = Number(range[1]); if (range[2] !== '') end = Math.min(end, Number(range[2])); }
+      if (start > end || start >= stat.size) { res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` }); return res.end(); }
+      status = 206; headers['Content-Range'] = `bytes ${start}-${end}/${stat.size}`;
+    }
+    headers['Content-Length'] = Math.max(0, end - start + 1);
+    res.writeHead(status, headers);
+    if (req.method === 'HEAD' || stat.size === 0) return res.end();
+    const stream = handle.createReadStream({ start, end, autoClose: false });
     await new Promise(resolve => { stream.on('error', () => { res.destroy(); resolve(); }); res.on('close', () => { stream.destroy(); resolve(); }); stream.pipe(res); });
   }
 
@@ -278,8 +301,8 @@ async function createShare({ folders, key, cert, now = Date.now, sessionTtlMs = 
           const current = await fsp.stat(real);
           const stat = await handle.stat();
           if (!stat.isFile() || stat.ino !== current.ino || stat.dev !== current.dev || await fsp.realpath(file) !== real) return json(res, 403, { error: 'File changed; refresh gallery' });
-          if (stat.size > MAX_IMAGE_BYTES) return json(res, 413, { error: 'Image exceeds 50 MiB limit' });
-          if (kind === 'images') return await sendStream(req, res, handle, stat, FORMATS[path.extname(file).toLowerCase()]);
+          if (stat.size > (isVideo(real) ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES)) return json(res, 413, { error: 'File exceeds the size limit' });
+          if (kind === 'images') return await sendStream(req, res, handle, stat, MEDIA_FORMATS[path.extname(file).toLowerCase()]);
           try {
             const out = await derive(id, real, stat, kind === 'thumbs' ? THUMB_PX : DISPLAY_PX);
             derived = await fsp.open(out, fs.constants.O_RDONLY);

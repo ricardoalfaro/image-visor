@@ -409,6 +409,9 @@ struct ThumbnailsScreen: View {
                                 // Fixed 4:3 cell; the photo fills it and is cropped, so every tile is identical.
                                 Color.clear.aspectRatio(4.0 / 3.0, contentMode: .fit)
                                     .overlay(CoverImage(path: photo.thumbPath ?? photo.displayPath, client: client, maxPixel: 480))
+                                    .overlay(alignment: .bottomTrailing) {
+                                        if photo.isVideo { Image(systemName: "play.circle.fill").font(.title2).padding(10).foregroundStyle(.white).shadow(radius: 6) }
+                                    }
                                     .clipped()
                             }.buttonStyle(.card)
                         }
@@ -437,6 +440,8 @@ struct ViewerScreen: View {
     let seconds: Int
     let shuffle: Bool
     var startID: String? = nil
+    @State private var videoPhoto: Photo?
+    @State private var videoEnded = false
 
     @State private var photos: [Photo] = []
     @State private var index = 0
@@ -482,6 +487,10 @@ struct ViewerScreen: View {
                 }.padding(80)
             default: EmptyView()
             }
+            if photos.indices.contains(index), photos[index].isVideo, shownIndex == index {
+                Image(systemName: "play.circle.fill").font(.system(size: 130)).foregroundStyle(.white.opacity(0.85))
+                    .shadow(radius: 20).allowsHitTesting(false)
+            }
             if infoVisible, photos.indices.contains(index) {
                 VStack { Spacer()
                     HStack { VStack(alignment: .leading, spacing: 6) {
@@ -513,16 +522,23 @@ struct ViewerScreen: View {
             if direction == .up { flashInfo() }
         }
         // Select: zoom in (and keep zooming). Menu: zoom out one step, then close the viewer.
-        .onTapGesture { if case .failed = status, shown == nil { Task { await load() } } else { zoomIn() } }
+        .onTapGesture { if case .failed = status, shown == nil { Task { await load() } } else if photos.indices.contains(index), photos[index].isVideo { videoPhoto = photos[index] } else { zoomIn() } }
         .onPlayPauseCommand { if zoomLevel == 0 { togglePlaying() } }
         .onExitCommand { if zoomLevel > 0 { zoomOut() } else { dismiss() } }
         .onChange(of: scenePhase) { _, phase in if phase != .active { playing = false } }
         .onAppear { focused = true; UIApplication.shared.isIdleTimerDisabled = true }
         .onDisappear { playing = false; UIApplication.shared.isIdleTimerDisabled = false }
+        .fullScreenCover(item: $videoPhoto, onDismiss: {
+            // Finishing a video continues the slideshow; leaving it early stops the slideshow.
+            if videoEnded { videoEnded = false; if playing { move(1) } } else { playing = false }
+        }) { photo in
+            VideoPlayerView(client: client, photo: photo) { videoEnded = true; videoPhoto = nil }.ignoresSafeArea()
+        }
         .task { await load() }
         .task(id: index) { resetZoom(); await show(index) }
         .task(id: SlideKey(playing: playing, index: index, shownIndex: shownIndex, seconds: seconds)) {
             guard playing, shownIndex == index else { return }
+            if photos[index].isVideo { videoPhoto = photos[index]; return }
             do { try await Task.sleep(for: .seconds(seconds)); try Task.checkCancellation(); move(1) } catch {}
         }
     }
@@ -533,7 +549,7 @@ struct ViewerScreen: View {
         status = .loading
         do {
             var list = try await client.decode(PhotoList.self, path: "/v1/galleries/\(gallery.id)").images
-            guard !list.isEmpty else { status = .failed("Esta galería no tiene fotos JPEG, PNG o HEIC."); return }
+            guard !list.isEmpty else { status = .failed("Esta galería no tiene fotos (JPEG, PNG, HEIC) ni videos (MP4, MOV, M4V)."); return }
             if shuffle && startID == nil { list.shuffle() }
             photos = list
             let saved = shuffle ? 0 : UserDefaults.standard.integer(forKey: "position.\(gallery.id)")
@@ -580,7 +596,7 @@ struct ViewerScreen: View {
     }
 
     private func zoomIn() {
-        guard shown != nil, photos.indices.contains(index) else { return }
+        guard shown != nil, photos.indices.contains(index), !photos[index].isVideo else { return }
         if zoomLevel == 0 {
             playing = false
             loadZoomImage()
