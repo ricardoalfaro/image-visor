@@ -174,6 +174,19 @@ function formatCode(code) {
   return `${code.slice(0, 4)} ${code.slice(4)}`;
 }
 
+/** The code slot shows either the pairing code or, once a TV is linked, the unlink action. */
+function showSlot(mode) {
+  tvLinkCode.hidden = mode === "unlink";
+  tvLinkRevokeButton.hidden = mode !== "unlink";
+}
+
+function showLinked() {
+  window.clearInterval(countdownTimer);
+  codeExpiresAt = 0;
+  showSlot("unlink");
+  tvLinkHelp.textContent = "La TV está vinculada. Usa «Nuevo código» para vincular otra.";
+}
+
 function setCode(code) {
   tvLinkCode.textContent = code ? formatCode(code) : "— — — —  — — — —";
   tvLinkCode.classList.remove("is-expired");
@@ -209,11 +222,11 @@ function describeStatus(status) {
   const shared = `${count} ${count === 1 ? "carpeta compartida" : "carpetas compartidas"}`;
   const note = skipped ? ` · ${skipped} del navegador no se pueden compartir (ábrelas con el selector del servidor)` : "";
   tvLinkStatus.textContent = `${paired}${shared}${note}.`;
-  tvLinkRevokeButton.hidden = !status.paired;
 }
 
 async function requestCode() {
   tvLinkNewCodeButton.disabled = true;
+  showSlot("code");
 
   try {
     const result = await tvApi("pair", {});
@@ -245,7 +258,7 @@ export function isTvLinkOpen() {
 
 export async function openTvLinkDialog() {
   tvLinkDialog.setAttribute("aria-hidden", "false");
-  tvLinkRevokeButton.hidden = true;
+  showSlot("code");
   setCode("");
   tvLinkHelp.textContent = "Generando código…";
   tvLinkCloseButton.focus();
@@ -261,7 +274,11 @@ export async function openTvLinkDialog() {
 
   tvLinkNewCodeButton.disabled = false;
   tvLinkSyncButton.disabled = false;
-  await requestCode();
+  if (status.paired) {
+    showLinked();
+  } else {
+    await requestCode();
+  }
 
   // Show "TV vinculada" as soon as the Apple TV uses the code.
   window.clearInterval(statusTimer);
@@ -269,11 +286,7 @@ export async function openTvLinkDialog() {
     const latest = await tvApi("status");
 
     if (latest.paired && codeExpiresAt > Date.now()) {
-      window.clearInterval(countdownTimer);
-      codeExpiresAt = 0;
-      setCode("");
-      tvLinkCode.textContent = "✓ Vinculada";
-      tvLinkHelp.textContent = "Las galerías ya aparecen en tu Apple TV.";
+      showLinked();
       describeStatus(latest);
     }
   }, 2000);
@@ -302,7 +315,11 @@ export async function initializeTvLink() {
   tvLinkRevokeButton.addEventListener("click", async () => {
     const result = await tvApi("revoke", {});
     showNotice(result.ok ? "Se desvincularon todas las TV." : "No se pudo desvincular.", result.ok ? "info" : "warning");
-    await refreshStatus();
+    const status = await refreshStatus();
+
+    if (result.ok && status.running) {
+      await requestCode();
+    }
   });
 
   // The button gives this profile control of the TV; the last profile to sync wins.

@@ -2729,18 +2729,27 @@ body.media-strip-expanded .media-strip::after {
   margin-left: auto;
 }
 
-.tv-link-revoke {
-  padding: 8px 4px;
-  border: 0;
-  background: transparent;
+.tv-link-unlink {
+  width: 100%;
   color: #d33131;
-  font: inherit;
-  font-size: 13px;
+  font-size: 26px;
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
-.tv-link-revoke:hover {
-  text-decoration: underline;
+.tv-link-unlink:hover {
+  border-color: #d33131;
+  background: rgba(211, 49, 49, 0.08);
+}
+
+.tv-link-unlink[hidden] {
+  display: none;
+}
+
+.tv-link-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @media (max-width: 480px) {
