@@ -2648,17 +2648,59 @@ body.media-strip-expanded .media-strip::after {
 }
 
 .tv-link-panel {
-  width: min(440px, 100%);
+  display: grid;
+  gap: 16px;
+  width: min(460px, 100%);
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.tv-link-panel > * {
+  margin: 0 !important;
+}
+
+.tv-link-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tv-link-header h2 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.tv-link-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tv-link-close:hover {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.confirm-dialog-panel p.tv-link-status {
+  font-size: 13px;
 }
 
 .tv-link-code {
-  margin: 4px 0 14px;
-  padding: 18px 12px;
-  border-radius: 10px;
+  padding: 22px 12px;
+  border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--bg);
-  font: 600 34px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: 0.14em;
+  background: var(--control);
+  font: 600 32px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
   text-align: center;
   user-select: all;
 }
@@ -2668,19 +2710,49 @@ body.media-strip-expanded .media-strip::after {
 }
 
 .confirm-dialog-panel p.tv-link-help {
-  margin-bottom: 14px;
+  font-size: 13px;
 }
 
-.confirm-dialog-panel p.tv-link-fingerprint {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 22px;
-  font-size: 12px;
+.tv-link-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
-.tv-link-fingerprint code {
-  color: var(--text);
-  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-  overflow-wrap: anywhere;
-  user-select: all;
+.tv-link-footer-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.tv-link-revoke {
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: #d33131;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tv-link-revoke:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .tv-link-footer {
+    flex-wrap: wrap;
+  }
+
+  .tv-link-footer-actions {
+    width: 100%;
+  }
+
+  .tv-link-footer-actions .button {
+    flex: 1;
+  }
 }

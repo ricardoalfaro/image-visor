@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import {
-  tvLinkButton, tvLinkDialog, tvLinkStatus, tvLinkCode, tvLinkHelp, tvLinkFingerprint,
+  tvLinkButton, tvLinkDialog, tvLinkStatus, tvLinkCode, tvLinkHelp,
   tvLinkRevokeButton, tvLinkCloseButton, tvLinkNewCodeButton, tvLinkSyncButton,
 } from "./dom.js";
 import { showNotice } from "./ui.js";
@@ -216,7 +216,6 @@ async function requestCode() {
   tvLinkNewCodeButton.disabled = true;
 
   try {
-    await syncTvGalleries();
     const result = await tvApi("pair", {});
 
     if (!result.ok || !result.code) {
@@ -226,7 +225,6 @@ async function requestCode() {
     }
 
     setCode(result.code);
-    tvLinkFingerprint.textContent = result.fingerprint || "—";
     codeExpiresAt = Date.now() + CODE_LIFETIME_MS;
     startCountdown();
   } finally {
@@ -237,10 +235,6 @@ async function requestCode() {
 async function refreshStatus() {
   const status = await tvApi("status");
   describeStatus(status);
-
-  if (status.fingerprint) {
-    tvLinkFingerprint.textContent = status.fingerprint;
-  }
 
   return status;
 }
