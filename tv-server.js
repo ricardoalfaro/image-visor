@@ -356,6 +356,7 @@ function control(method, route, body) {
 
 function startControlServer(share, fingerprint) {
   const reply = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
+  let owner = null;
   const control = http.createServer(async (req, res) => {
     try {
       const upload = req.method === 'PUT' && /^\/collections\/([A-Za-z0-9_-]{1,64})\/([a-f0-9]{64}\.[a-z]+)$/.exec(req.url);
@@ -366,7 +367,7 @@ function startControlServer(share, fingerprint) {
       let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 1e7) return reply(res, 413, {}); }
       const body = raw ? JSON.parse(raw) : {};
       if (req.method === 'GET' && req.url === '/status') {
-        return reply(res, 200, { running: true, paired: share.hasSessions(), galleries: share.roots().length, fingerprint });
+        return reply(res, 200, { running: true, paired: share.hasSessions(), galleries: share.roots().length, fingerprint, owner });
       }
       if (req.method === 'POST' && req.url === '/pair') {
         return reply(res, 200, { code: share.newCode(), expiresInSeconds: 300, fingerprint });
@@ -382,6 +383,8 @@ function startControlServer(share, fingerprint) {
         const folders = body.folders.filter(f => f && typeof f.path === 'string').map(f => ({ path: f.path, name: typeof f.name === 'string' ? f.name.slice(0, 120) : '' }));
         const result = await share.setFolders(folders);
         writeConfig(folders);
+        // Which browser profile synced last; only that one keeps the TV up to date automatically.
+        owner = typeof body.owner === 'string' && /^[A-Za-z0-9-]{1,64}$/.test(body.owner) ? body.owner : null;
         return reply(res, 200, result);
       }
       reply(res, 404, { error: 'Not found' });

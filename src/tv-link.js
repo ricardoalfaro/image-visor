@@ -7,6 +7,8 @@ import { showNotice } from "./ui.js";
 import { getFavoriteKey } from "./favorites.js";
 
 const COLLECTIONS_SYNCED_KEY = "imageVisorTvCollectionsSynced";
+const PROFILE_KEY = "imageVisorTvProfileId";
+let syncTimer = 0;
 let collectionsSyncing = false;
 let collectionsDirty = false;
 
@@ -47,7 +49,36 @@ export async function syncTvGalleries() {
   }
 
   // Explicit action: whatever this browser profile has replaces the TV's list, even if it is empty.
-  return await tvApi("galleries", { folders: getShareableFolders() });
+  return await tvApi("galleries", { folders: getShareableFolders(), owner: getProfileId() });
+}
+
+/** Random id of this browser profile, so the service knows which profile synced last. */
+function getProfileId() {
+  try {
+    let id = localStorage.getItem(PROFILE_KEY);
+
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(PROFILE_KEY, id);
+    }
+
+    return id;
+  } catch (error) {
+    return "";
+  }
+}
+
+/** Changes made here reach the TV by themselves, but only while this profile is the one that synced last. */
+function scheduleAutoSync() {
+  window.clearTimeout(syncTimer);
+  syncTimer = window.setTimeout(async () => {
+    const status = await tvApi("status");
+
+    if (status.running && status.owner && status.owner === getProfileId()) {
+      await syncTvGalleries();
+      await syncTvCollections();
+    }
+  }, 1200);
 }
 
 /** "Sincronizar con TV": this browser profile becomes the content of the Apple TV. */
@@ -280,6 +311,8 @@ export async function initializeTvLink() {
     await refreshStatus();
   });
 
-  // Nothing is sent to the TV until this button is pressed; the last profile to sync wins.
+  // The button gives this profile control of the TV; the last profile to sync wins.
   tvLinkSyncButton.addEventListener("click", syncNow);
+  window.addEventListener("image-visor:recent-folders-updated", scheduleAutoSync);
+  window.addEventListener("image-visor:collections-updated", scheduleAutoSync);
 }

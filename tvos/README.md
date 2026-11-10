@@ -10,7 +10,7 @@ Requiere Node.js 22+ y `openssl` en PATH. Desde la raíz del repositorio:
 node tv-server.js install-service   # arranca solo al iniciar sesión (macOS)
 ```
 
-Las galerías son las carpetas que abres en la app de escritorio (`node server.js`, `http://localhost:5173`); se envían a la TV al pulsar «Sincronizar con TV» en el diálogo «Vincular TV». Lo último sincronizado reemplaza lo anterior, venga del navegador o perfil que venga. Solo se comparten carpetas abiertas con el selector del servidor local, porque son las que tienen una ruta real. La versión de producción no puede compartir carpetas.
+Las galerías son las carpetas que abres en la app de escritorio (`node server.js`, `http://localhost:5173`); se envían a la TV al pulsar «Sincronizar con TV» en el diálogo «Vincular TV». Lo último sincronizado reemplaza lo anterior, venga del navegador o perfil que venga. Después, los cambios de ese perfil llegan solos a la TV mientras siga siendo el último que sincronizó. Solo se comparten carpetas abiertas con el selector del servidor local, porque son las que tienen una ruta real. La versión de producción no puede compartir carpetas.
 
 Para vincular: en la app de escritorio pulsa **Vincular TV** (riel izquierdo). Muestra un código de 8 dígitos (5 minutos, un solo uso) y la huella del certificado. En la TV elige **Fotos locales**, comprueba que la huella coincide y escribe el código. La sesión dura un año y sobrevive a reinicios.
 
